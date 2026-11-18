@@ -1,6 +1,10 @@
 # Historique des versions
 
+## Tableau de bord (`index.html`)
+- **v1.0** : état de préparation en direct (cerveau, voix, partie en cours), schéma du fonctionnement, étapes pour jouer, pièces du projet, décisions, aide et lexique.
+
 ## App de jeu (`jouer.html`)
+- **v2.0** : bouton ⌂ vers le tableau de bord ; les réglages s'ouvrent directement depuis le tableau de bord.
 - **v1.9** : VoiceStudio utilise une voix standard par défaut si aucune voix n'est choisie ; les voix personnelles s'ajoutent à la liste.
 - **v1.8** : VoiceStudio passe par le serveur local du Mac (`serveur-mj.py`), sur le Mac comme sur le téléphone.
 - **v1.7** : nouveau moteur de voix VoiceStudio, avec casting par personnage.

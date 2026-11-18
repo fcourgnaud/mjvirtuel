@@ -3,51 +3,229 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MJ virtuel</title>
+<title>MJ virtuel · Tableau de bord</title>
 <link href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#0c0c0a;--panel:#151512;--line:#2a2a24;--ink:#e8e4d4;--dim:#8c8774;--rec:#e0322b;--amber:#e8b04a}
+  :root{--bg:#0c0c0a;--panel:#151512;--panel2:#1b1b17;--line:#2a2a24;--ink:#e8e4d4;--dim:#8c8774;--rec:#e0322b;--amber:#e8b04a;--ok:#9bd18b;--blue:#7fb8d3}
   *{box-sizing:border-box}
-  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:15px}
-  body::after{content:"";position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(to bottom,rgba(255,255,255,.025) 0 1px,transparent 1px 3px)}
-  .wrap{max-width:640px;margin:0 auto;padding:28px 16px 60px}
-  .rec{color:var(--rec);font-family:"VT323",monospace;font-size:22px}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:15px;line-height:1.5}
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:50;background:repeating-linear-gradient(to bottom,rgba(255,255,255,.025) 0 1px,transparent 1px 3px)}
+  .wrap{max-width:760px;margin:0 auto;padding:22px 16px 70px}
+  .vhs{font-family:"VT323",monospace;font-weight:400;letter-spacing:2px}
+  header{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;border-bottom:1px solid var(--line);padding-bottom:12px}
+  .rec{color:var(--rec);font-family:"VT323",monospace;font-size:20px}
   .dot{width:10px;height:10px;border-radius:50%;background:var(--rec);display:inline-block;margin-right:6px;box-shadow:0 0 8px var(--rec);animation:b 1.2s steps(2) infinite}
   @keyframes b{50%{opacity:0}}
-  h1{font-family:"VT323",monospace;font-weight:400;font-size:56px;line-height:1;margin:10px 0 4px;letter-spacing:3px}
-  .sub{color:var(--dim);margin:0 0 26px}
-  a.big{display:block;border:1px solid var(--line);background:var(--panel);color:var(--ink);text-decoration:none;padding:16px 18px;margin:12px 0}
-  a.big:hover{border-color:var(--dim)}
-  a.big.main{border-color:var(--rec);background:rgba(224,50,43,.12)}
-  a.big b{font-family:"VT323",monospace;font-weight:400;font-size:30px;display:block}
-  a.big span{color:var(--dim);font-size:13px}
-  h2{font-size:13px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin:30px 0 8px}
-  ul{padding-left:18px;color:var(--dim);font-size:13px;line-height:1.6}
-  ul b{color:var(--ink)}
-  .note{color:var(--dim);font-size:12px;line-height:1.6}
-  .note a{color:var(--amber)}
+  h1{font-size:50px;line-height:1;margin:6px 0 0}
+  .tag{color:var(--dim);font-size:12px;text-align:right}
+  .intro{color:var(--dim);margin:14px 0 6px}
+  nav{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 4px}
+  nav a{color:var(--dim);font-size:12px;text-decoration:none;border:1px solid var(--line);padding:4px 8px}
+  nav a:hover{color:var(--ink);border-color:var(--dim)}
+  section{margin-top:30px}
+  h2{font-family:"VT323",monospace;font-weight:400;font-size:30px;letter-spacing:2px;margin:0 0 4px}
+  h2 small{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--amber);letter-spacing:1px;margin-right:8px}
+  .lead{color:var(--dim);font-size:13px;margin:0 0 12px}
+  .play{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--rec);background:rgba(224,50,43,.12);color:var(--ink);text-decoration:none;padding:16px 18px;margin-top:18px}
+  .play b{font-family:"VT323",monospace;font-weight:400;font-size:34px;letter-spacing:2px}
+  .play span{color:var(--dim);font-size:13px}
+  .status{border:1px solid var(--line);background:var(--panel)}
+  .st{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center;padding:12px 14px;border-top:1px solid var(--line)}
+  .st:first-child{border-top:0}
+  .st .ic{font-size:18px;text-align:center}
+  .st .t b{display:block}
+  .st .t span{color:var(--dim);font-size:12px}
+  .st a.fix{color:var(--amber);font-size:12px;text-decoration:none;border:1px solid #5a3f17;padding:6px 9px;white-space:nowrap}
+  .ok{color:var(--ok)} .ko{color:var(--rec)} .wa{color:var(--amber)} .in{color:var(--blue)}
+  .verdict{padding:10px 14px;border-top:1px solid var(--line);font-size:13px;background:var(--panel2)}
+  .flow{display:grid;grid-template-columns:1fr;gap:6px}
+  .box{border:1px solid var(--line);background:var(--panel);padding:10px 12px}
+  .box b{display:block}
+  .box span{color:var(--dim);font-size:12px}
+  .box.c1{border-left:3px solid var(--ok)} .box.c2{border-left:3px solid var(--blue)} .box.c3{border-left:3px solid var(--amber)} .box.c4{border-left:3px solid var(--rec)}
+  .arrow{color:var(--dim);font-size:16px;text-align:center}
+  .arrow .h{display:none}
+  @media (min-width:700px){ .flow{grid-template-columns:1fr 24px 1fr 24px 1fr 24px 1fr;align-items:stretch} .arrow{display:flex;align-items:center;justify-content:center} .arrow .v{display:none} .arrow .h{display:inline} }
+  ol.steps{list-style:none;padding:0;margin:0;counter-reset:s}
+  ol.steps li{counter-increment:s;display:grid;grid-template-columns:34px 1fr;gap:10px;padding:10px 0;border-top:1px dashed var(--line)}
+  ol.steps li:first-child{border-top:0}
+  ol.steps li::before{content:counter(s);font-family:"VT323",monospace;font-size:26px;color:var(--rec);line-height:1}
+  ol.steps b{display:block}
+  ol.steps span{color:var(--dim);font-size:13px}
+  ol.steps a{color:var(--amber)}
+  .where{display:inline-block;font-size:11px;border:1px solid var(--line);padding:0 6px;margin-left:6px;color:var(--dim);vertical-align:middle;font-weight:400}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+  .card{border:1px solid var(--line);background:var(--panel);padding:12px 14px}
+  .card b{display:block;margin-bottom:4px}
+  .card p{margin:0 0 6px;color:var(--dim);font-size:13px}
+  .card a{color:var(--amber);font-size:12px}
+  h3{font-family:"VT323",monospace;font-weight:400;font-size:24px;letter-spacing:2px;margin:22px 0 6px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  td{border-top:1px solid var(--line);padding:8px 6px;vertical-align:top}
+  td:first-child{width:36%}
+  td:last-child{color:var(--dim)}
+  details{border:1px solid var(--line);background:var(--panel);padding:10px 14px;margin-top:10px}
+  summary{cursor:pointer;font-weight:600}
+  dl{margin:8px 0 0;font-size:13px} dt{margin-top:8px} dd{margin:0;color:var(--dim)}
+  .note{color:var(--dim);font-size:12px}
+  footer{margin-top:36px;border-top:1px solid var(--line);padding-top:12px;color:var(--dim);font-size:12px}
+  footer a{color:var(--amber)}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="rec"><span class="dot"></span>REC</div>
-  <h1>MJ VIRTUEL</h1>
-  <p class="sub">Un meneur de jeu de rôle qui parle : « la Voix ». Premier jeu : Channel Fear.</p>
+  <header>
+    <div><div class="rec"><span class="dot"></span>REC</div><h1 class="vhs">MJ VIRTUEL</h1></div>
+    <div class="tag">Tableau de bord<br><span id="dashVer"></span></div>
+  </header>
+  <p class="intro">Un meneur de jeu de rôle qui parle : « la Voix ». Il raconte, fait parler chaque personnage avec sa propre voix et applique les règles. Premier jeu : <i>Channel Fear</i>, épisode <i>Southern Gothic</i>.</p>
+  <nav><a href="#etat">1 · Où j'en suis</a><a href="#marche">2 · Comment ça marche</a><a href="#jouer">3 · Jouer une partie</a><a href="#pieces">4 · Les pièces</a><a href="#decisions">5 · Décisions</a><a href="#aide">6 · Aide</a></nav>
 
-  <a class="big main" href="jouer.html"><b>▶ Jouer</b><span>L'app de jeu : avatar, voix des personnages, dictée, sauvegarde de la partie.</span></a>
-  <a class="big" href="banc.html"><b>♫ Banc d'essai des voix</b><span>Écouter et comparer les voix de chaque personnage (OpenAI, ElevenLabs, Piper).</span></a>
+  <a class="play" href="jouer.html"><div><b>▶ JOUER</b><br><span>Ouvrir l'app de jeu</span></div><span id="playHint"></span></a>
 
-  <h2>Versions en ligne</h2>
-  <ul>
-    <li><b>App de jeu v1.9</b> (01/11/2026)</li>
-    <li><b>Banc d'essai v1.3</b> (01/11/2026)</li>
-    <li><b>Serveur local du Mac v1.0</b> (pour VoiceStudio, voir le README)</li>
-  </ul>
-  <p class="note">Le numéro de version s'affiche aussi en haut de l'app de jeu. S'il ne correspond pas à celui ci-dessus, ferme l'onglet et rouvre-le : ton navigateur garde l'ancienne version en mémoire.<br>
-  Historique de toutes les mises à jour : <a href="https://github.com/fcourgnaud/mjvirtuel/commits/main">github.com/fcourgnaud/mjvirtuel/commits/main</a> · Détail des changements : <a href="https://github.com/fcourgnaud/mjvirtuel/blob/main/CHANGELOG.md">CHANGELOG</a></p>
+  <section id="etat">
+    <h2><small>1</small>OÙ J'EN SUIS</h2>
+    <p class="lead">Vérifié en direct sur cet appareil. Les réglages sont gardés dans ce navigateur : sur un autre téléphone ou ordinateur, il faut les refaire.</p>
+    <div class="status" id="status"></div>
+  </section>
 
-  <h2>Avant de jouer</h2>
-  <p class="note">Les documents du meneur (brief, fiche système, fiche scénario, méthode) ne sont pas sur ce site : le dépôt est public et le scénario vient d'un livre acheté. Charge-les dans l'app (⚙ › Documents) ou dans ton Projet Claude. Les clés et réglages restent sur ton appareil.</p>
+  <section id="marche">
+    <h2><small>2</small>COMMENT ÇA MARCHE</h2>
+    <p class="lead">À chaque tour de jeu, l'information fait ce trajet :</p>
+    <div class="flow">
+      <div class="box c1"><b>Les joueurs</b><span>disent ou écrivent ce que font leurs personnages, et lancent de vrais dés.</span></div>
+      <div class="arrow"><span class="v">↓</span><span class="h">→</span></div>
+      <div class="box c2"><b>Le cerveau : Claude</b><span>joue la Voix avec les documents du meneur (règles, scénario, brief). Il répond avec des balises comme [voix:jacob].</span></div>
+      <div class="arrow"><span class="v">↓</span><span class="h">→</span></div>
+      <div class="box c3"><b>L'app de jeu</b><span>lit la réponse, choisit la voix de chaque personnage et l'humeur de l'avatar.</span></div>
+      <div class="arrow"><span class="v">↓</span><span class="h">→</span></div>
+      <div class="box c4"><b>Les voix</b><span>Piper, ElevenLabs, OpenAI ou VoiceStudio prononcent les répliques, avec le grain VHS.</span></div>
+    </div>
+    <p class="note" style="margin-top:10px">Deux façons de relier le cerveau à l'app : <b>copier-coller</b> (gratuit : tu copies chaque réponse de ton Projet Claude dans l'app) ou <b>automatique</b> (l'app parle directement à Claude, avec une clé API payante).</p>
+  </section>
+
+  <section id="jouer">
+    <h2><small>3</small>JOUER UNE PARTIE</h2>
+    <p class="lead">En mode copier-coller, gratuit. Les trois premières étapes ne se font qu'une fois par appareil.</p>
+    <ol class="steps">
+      <li><div><b>Préparer ton Projet Claude <span class="where">une fois</span></b><span>Dans les instructions du projet : le texte du brief de l'avatar. Dans ses fichiers : la fiche système, la fiche scénario et la méthode.</span></div></li>
+      <li><div><b>Choisir le moteur de voix <span class="where">une fois</span></b><span>Dans <a href="jouer.html#reglages">les réglages de l'app</a> : Piper (gratuit, hors ligne), ElevenLabs (le plus expressif) ou OpenAI. Pour Piper, installe d'abord les voix depuis le <a href="banc.html">banc d'essai</a>.</span></div></li>
+      <li><div><b>Tester les voix <span class="where">une fois</span></b><span>Le bouton ▶ à côté de chaque personnage, dans les réglages. Monte le volume.</span></div></li>
+      <li><div><b>Lancer la partie dans Claude</b><span>Dans ton Projet : « Lance la partie. Je joue Archie et Sunny. »</span></div></li>
+      <li><div><b>Copier, puis « Coller et lire »</b><span>Touche le bouton Copier de la réponse de la Voix, passe à l'app et touche « 📋 Coller et lire ». L'app fait parler chaque personnage.</span></div></li>
+      <li><div><b>Répondre dans Claude</b><span>Commence par le nom du personnage : « Archie : je montre ma carte de presse. » Pour un jet : « 3 réussites, je dépense 0 Ressource. » Puis recopie la réponse suivante.</span></div></li>
+      <li><div><b>Finir</b><span>Dans Claude : « Fin de session. Remplis le journal de partie. » Ce journal sert à améliorer la méthode.</span></div></li>
+    </ol>
+  </section>
+
+  <section id="pieces">
+    <h2><small>4</small>LES PIÈCES DU PROJET</h2>
+    <div class="cards">
+      <div class="card"><b>Les documents du meneur</b><p>Brief de l'avatar, fiche système, fiche scénario, méthode. Une IA ne se souvient de rien : tout ce qu'elle doit savoir y est écrit. Ils restent privés (scénario acheté), hors de ce site.</p></div>
+      <div class="card"><b>L'app de jeu</b><p>Avatar VHS, voix par personnage, dictée, sauvegarde de la partie.</p><a href="jouer.html">Ouvrir ›</a></div>
+      <div class="card"><b>Le banc d'essai</b><p>Comparer les moteurs de voix sur les mêmes répliques, et installer Piper.</p><a href="banc.html">Ouvrir ›</a></div>
+      <div class="card"><b>Le serveur du Mac</b><p>Pour utiliser VoiceStudio, gratuit, depuis le Mac ou le téléphone sur le même wifi. Ne marche pas depuis ce site.</p><a href="https://github.com/fcourgnaud/mjvirtuel#voix-voicestudio-mac">Mode d'emploi ›</a></div>
+    </div>
+    <h3>LES MOTEURS DE VOIX</h3>
+    <table>
+      <tr><td><b>Piper</b></td><td>Gratuit, sur le téléphone, même sans internet. Moins expressif. À installer une fois depuis le banc d'essai.</td></tr>
+      <tr><td><b>ElevenLabs</b></td><td>Le plus expressif. Formule gratuite limitée (environ une séance par mois avec Flash). Clé avec la permission Text to Speech.</td></tr>
+      <tr><td><b>OpenAI</b></td><td>Environ 0,40 $ par séance. Pilotable par des consignes de jeu.</td></tr>
+      <tr><td><b>VoiceStudio</b></td><td>Gratuit, sur ton Mac. Uniquement via le serveur du Mac.</td></tr>
+    </table>
+  </section>
+
+  <section id="decisions">
+    <h2><small>5</small>DÉCISIONS PRISES</h2>
+    <table>
+      <tr><td>Partir de Channel Fear</td><td>Règles courtes, parties de moins de 2 heures, meneur « voix off ».</td></tr>
+      <tr><td>Un avatar neutre, « la Voix »</td><td>Le plus simple, et il marche pour n'importe quel jeu.</td></tr>
+      <tr><td>Un cadre, pas un script</td><td>La fiche dit ce qui est vrai, pas ce qui doit arriver : chaque table vit sa propre partie.</td></tr>
+      <tr><td>Améliorer après chaque partie</td><td>Le journal montre ce qui a coincé. On corrige les erreurs du meneur, jamais les choix des joueurs.</td></tr>
+      <tr><td>Mode copier-coller</td><td>Tester sans payer l'API.</td></tr>
+      <tr><td>Pas les voix premium d'Apple</td><td>Apple ne les donne pas aux pages web.</td></tr>
+      <tr><td>Documents hors de GitHub</td><td>Le dépôt est public et le scénario est acheté.</td></tr>
+    </table>
+  </section>
+
+  <section id="aide">
+    <h2><small>6</small>AIDE</h2>
+    <details><summary>Les messages d'erreur fréquents</summary>
+      <dl>
+        <dt>ElevenLabs 401</dt><dd>Clé refusée : recrée-la sur elevenlabs.io › Developers › API Keys, avec Text to Speech, Voices et User, puis recolle-la dans les réglages.</dd>
+        <dt>VoiceStudio injoignable</dt><dd>Normal depuis ce site : VoiceStudio ne marche qu'avec le serveur du Mac (adresse http://localhost:8000/jouer.html).</dd>
+        <dt>Pas de son</dt><dd>Monte le volume, touche ↺ Réécouter. Vérifie le numéro de version en haut de l'app ; s'il est ancien, ferme l'onglet et rouvre-le.</dd>
+        <dt>« Coller et lire » ne colle rien</dt><dd>Colle la réponse dans le champ du bas de l'app, puis touche ➤.</dd>
+      </dl>
+    </details>
+    <details><summary>Petit lexique</summary>
+      <dl>
+        <dt>La Voix</dt><dd>Le nom du meneur virtuel.</dd>
+        <dt>Projet Claude</dt><dd>Un espace de l'app Claude qui garde des instructions et des fichiers ; la Voix y joue en mode copier-coller.</dd>
+        <dt>API, clé API</dt><dd>La porte d'entrée qui permet à l'app d'utiliser un service (Claude, ElevenLabs). La clé est un mot de passe qui facture l'usage : ne jamais la partager.</dd>
+        <dt>Balises</dt><dd>Des repères comme [voix:jacob] ou [humeur:grave] que la Voix glisse dans ses réponses. L'app les lit puis les retire.</dd>
+        <dt>Bloc d'état</dt><dd>La mémoire de la partie ([ÉTAT]…), écrite par la Voix à la fin de chaque réponse. Il n'est pas lu à voix haute.</dd>
+        <dt>Journal de partie</dt><dd>Le bilan écrit par la Voix en fin de séance, pour améliorer la méthode.</dd>
+      </dl>
+    </details>
+  </section>
+
+  <footer>
+    <span id="verList"></span><br>
+    Mises à jour : <a href="https://github.com/fcourgnaud/mjvirtuel/blob/main/CHANGELOG.md">historique des versions</a> · <a href="https://github.com/fcourgnaud/mjvirtuel/commits/main">toutes les modifications</a> · <a href="https://github.com/fcourgnaud/mjvirtuel">dépôt GitHub</a>
+  </footer>
 </div>
+
+<script>
+const VERSIONS = { tableau: "1.0", jeu: "2.0", banc: "1.3", serveur: "1.0", date: "18/11/2026" };
+document.getElementById("dashVer").textContent = "v" + VERSIONS.tableau + " · " + VERSIONS.date;
+document.getElementById("verList").textContent = `Versions en ligne : tableau de bord v${VERSIONS.tableau} · app de jeu v${VERSIONS.jeu} · banc d'essai v${VERSIONS.banc} · serveur du Mac v${VERSIONS.serveur}`;
+
+function get(k, d){ try{ const v = localStorage.getItem("mjv_" + k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } }
+const brain = get("brain", "paste"), engine = get("engine", "pi");
+const docs = get("docs", {}) || {}, cast = get("cast", {}) || {}, history = get("history", []) || [];
+const rows = [];
+const row = (state, title, detail, fix, fixLabel) => rows.push({state, title, detail, fix, fixLabel});
+const ICON = {ok:"✔", ko:"✘", wa:"!", in:"i"};
+let blocking = 0;
+
+if (brain === "paste"){
+  row("ok", "Cerveau : mode copier-coller (gratuit)", "La Voix joue dans ton Projet Claude. Vérifie qu'il contient le brief et les fiches (impossible à vérifier d'ici).", "jouer.html#reglages", "Changer");
+} else {
+  const keyOk = !!get("kAN", ""), docsOk = !!(docs.brief && docs.systeme && docs.scenario);
+  row(keyOk ? "ok" : "ko", "Cerveau : mode automatique (API)", keyOk ? "Clé Anthropic enregistrée." : "Il manque la clé Anthropic.", "jouer.html#reglages", "Régler");
+  row(docsOk ? "ok" : "ko", "Documents du meneur", docsOk ? "Brief, fiche système et fiche scénario chargés dans l'app." : "Charge le brief, la fiche système et la fiche scénario dans l'app.", "jouer.html#reglages", "Charger");
+  if (!keyOk) blocking++; if (!docsOk) blocking++;
+}
+
+const NAMES = {pi:"Piper", el:"ElevenLabs", oa:"OpenAI", vs:"VoiceStudio", off:"aucune (muet)"};
+if (engine === "pi"){
+  const n = (get("piVoices", []) || []).length;
+  row(n ? "ok" : "ko", "Voix : Piper (gratuit, hors ligne)", n ? `${n} voix françaises connues. Les voix téléchargées marchent hors ligne.` : "Piper n'est pas encore installé sur cet appareil.", "banc.html", n ? "Tester" : "Installer");
+  if (!n) blocking++;
+} else if (engine === "el"){
+  const keyOk = !!get("kEL", ""), voices = (get("elVoices", []) || []).length;
+  const casted = Object.values(cast).filter(c => c && c.el).length;
+  row(keyOk ? "ok" : "ko", "Voix : ElevenLabs", keyOk ? "Clé ElevenLabs enregistrée. En cas d'erreur 401, recrée-la (voir Aide)." : "Il manque la clé ElevenLabs.", "jouer.html#reglages", "Régler");
+  row(voices && casted ? "ok" : "wa", "Casting ElevenLabs", voices ? `${voices} voix chargées, ${casted} personnage(s) avec une voix.` : "Charge tes voix dans les réglages (⟳) et choisis-en une par personnage.", "jouer.html#reglages", "Régler");
+  if (!keyOk) blocking++;
+} else if (engine === "oa"){
+  const keyOk = !!get("kOA", "");
+  row(keyOk ? "ok" : "ko", "Voix : OpenAI", keyOk ? "Clé OpenAI enregistrée." : "Il manque la clé OpenAI.", "jouer.html#reglages", "Régler");
+  if (!keyOk) blocking++;
+} else if (engine === "vs"){
+  row("wa", "Voix : VoiceStudio", "VoiceStudio ne marche pas depuis ce site : utilise le serveur du Mac, ou choisis Piper ou ElevenLabs ici.", "jouer.html#reglages", "Changer");
+  blocking++;
+} else {
+  row("wa", "Voix : muet", "L'app affichera le texte sans le lire.", "jouer.html#reglages", "Changer");
+}
+
+const n = history.length;
+row("in", "Partie en cours", n ? `${n} message(s) sauvegardé(s) sur cet appareil : l'app reprendra là où tu t'es arrêté.` : "Aucune partie en cours.", "jouer.html", n ? "Reprendre" : "Commencer");
+
+document.getElementById("status").innerHTML = rows.map(r => `<div class="st"><div class="ic ${r.state}">${ICON[r.state]}</div><div class="t"><b>${r.title}</b><span>${r.detail}</span></div>${r.fix ? `<a class="fix" href="${r.fix}">${r.fixLabel} ›</a>` : "<span></span>"}</div>`).join("")
+  + `<div class="verdict">${blocking ? `<span class="ko">✘ ${blocking} point(s) à régler avant de jouer avec les voix.</span>` : `<span class="ok">✔ Prêt à jouer.</span> Moteur de voix : ${NAMES[engine] || engine}.`}</div>`;
+document.getElementById("playHint").textContent = blocking ? `${blocking} point(s) à régler` : (n ? "Reprendre la partie" : "Prêt");
+</script>
 </body>
 </html>

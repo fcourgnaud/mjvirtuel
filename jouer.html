@@ -58,7 +58,7 @@
 <body>
 <div class="app">
   <div class="monitor" id="monitor">
-    <div class="osd"><span class="rec"><span class="dot"></span>REC</span><span id="clock">00:00:00</span><span id="ver" style="color:var(--dim)"></span><button id="openSet" style="padding:2px 8px">⚙</button></div>
+    <div class="osd"><span class="rec"><span class="dot"></span>REC</span><span id="clock">00:00:00</span><span id="ver" style="color:var(--dim)"></span><span><a href="./" title="Tableau de bord" style="color:var(--ink);text-decoration:none;border:1px solid var(--line);padding:2px 8px;margin-right:6px">⌂</a><button id="openSet" style="padding:2px 8px">⚙</button></span></div>
     <div class="face" id="face"></div>
     <div><div class="who" id="who">LA VOIX</div><div class="mood" id="mood">en attente</div></div>
     <div class="jet" id="jet"></div>
@@ -145,9 +145,10 @@
 
 <script>
 /* ---------------- version ---------------- */
-const APP_VERSION = "1.9";
-const APP_DATE = "01/11/2026";
+const APP_VERSION = "2.0";
+const APP_DATE = "18/11/2026";
 const CHANGELOG = [
+  ["2.0", "Bouton ⌂ vers le tableau de bord ; les réglages s'ouvrent directement depuis le tableau de bord"],
   ["1.9", "VoiceStudio : voix standard par défaut si aucune voix n'est choisie, voix personnelles en plus"],
   ["1.8", "VoiceStudio via le serveur local du Mac (serveur-mj.py) : marche sur le Mac et sur le téléphone"],
   ["1.7", "Nouveau moteur de voix : VoiceStudio (gratuit, sur ton Mac), avec casting par personnage"],
@@ -646,6 +647,7 @@ $("#ver").textContent = "v" + APP_VERSION;
 $("#verNote").textContent = `App de jeu v${APP_VERSION} du ${APP_DATE}. Si ce numéro ne correspond pas à la dernière version envoyée, ferme l'onglet et rouvre-le (ou attends quelques minutes que GitHub se mette à jour).`;
 $("#changelog").innerHTML = CHANGELOG.map(([v, t]) => `<li><b>v${v}</b> : ${t}</li>`).join("");
 renderDocs(); renderElCast(); renderVsCast();
+if (location.hash === "#reglages") openSet();
 if (history.length){
   sys(`Partie reprise (${history.length} échanges). Consommation jusqu'ici : ${usage.in} jetons envoyés, ${usage.cached} relus en cache, ${usage.out} reçus.`);
   history.forEach(m => m.role === "user" ? addMsg("me", esc(m.content)) : renderMJ(m.content, false));

@@ -6,7 +6,7 @@ Un meneur de jeu de rôle virtuel, « la Voix », qui fait jouer un scénario à
 
 | Page | Rôle |
 |---|---|
-| [`index.html`](https://fcourgnaud.github.io/mjvirtuel/) | Accueil, versions en ligne |
+| [`index.html`](https://fcourgnaud.github.io/mjvirtuel/) | Tableau de bord : où j'en suis, comment ça marche, comment jouer |
 | [`jouer.html`](https://fcourgnaud.github.io/mjvirtuel/jouer.html) | L'app de jeu |
 | [`banc.html`](https://fcourgnaud.github.io/mjvirtuel/banc.html) | Le banc d'essai des voix |
 | `serveur-mj.py` | Serveur local du Mac, pour les voix VoiceStudio |
