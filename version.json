@@ -1,8 +1,8 @@
 {
-  "tableau": "1.2",
-  "jeu": "2.2",
+  "tableau": "1.3",
+  "jeu": "2.3",
   "banc": "1.4",
   "serveur": "1.0",
   "date": "18/11/2026",
-  "notes": "Jouer sans copier-coller (mode automatique) : plus simple à régler, coût estimé affiché."
+  "notes": "Meneur gratuit sans copier-coller : Gemini de Google."
 }

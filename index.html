@@ -105,7 +105,7 @@
       <div class="arrow"><span class="v">↓</span><span class="h">→</span></div>
       <div class="box c4"><b>Les voix</b><span>Piper, ElevenLabs, OpenAI ou VoiceStudio prononcent les répliques, avec le grain VHS.</span></div>
     </div>
-    <p class="note" style="margin-top:10px">Deux façons de relier le cerveau à l'app : <b>copier-coller</b> (gratuit : tu copies chaque réponse de ton Projet Claude dans l'app) ou <b>automatique</b> (l'app parle directement à Claude, avec une clé API payante).</p>
+    <p class="note" style="margin-top:10px">Trois façons de relier le cerveau à l'app : <b>copier-coller</b> (gratuit, tu copies chaque réponse de ton Projet Claude), <b>Gemini</b> (automatique et gratuit, avec des limites par jour) ou <b>Claude automatique</b> (le meilleur meneur, payant à l'usage).</p>
   </section>
 
   <section id="jouer">
@@ -180,8 +180,8 @@
   </footer>
 </div>
 
-<script>window.MJV_PAGE = { name: "tableau", version: "1.2" };</script>
-<script src="maj.js?v=1.2"></script>
+<script>window.MJV_PAGE = { name: "tableau", version: "1.3" };</script>
+<script src="maj.js?v=1.3"></script>
 <script>
 document.getElementById("dashVer").textContent = "v" + MJV_PAGE.version;
 // versions publiées : tableau des versions + liens toujours vers la dernière version
@@ -212,8 +212,10 @@ let blocking = 0;
 if (brain === "paste"){
   row("ok", "Cerveau : mode copier-coller (gratuit)", "La Voix joue dans ton Projet Claude. Vérifie qu'il contient le brief et les fiches (impossible à vérifier d'ici).", "jouer.html#reglages", "Changer");
 } else {
-  const keyOk = !!get("kAN", ""), docsOk = !!(docs.brief && docs.systeme && docs.scenario);
-  row(keyOk ? "ok" : "ko", "Cerveau : mode automatique (API)", keyOk ? "Clé Anthropic enregistrée." : "Il manque la clé Anthropic.", "jouer.html#reglages", "Régler");
+  const gm = brain === "gemini";
+  const keyOk = !!get(gm ? "kGM" : "kAN", ""), docsOk = !!(docs.brief && docs.systeme && docs.scenario);
+  row(keyOk ? "ok" : "ko", gm ? "Cerveau : Gemini (automatique, gratuit)" : "Cerveau : Claude (automatique, payant)",
+      keyOk ? (gm ? "Clé Gemini enregistrée. Limites gratuites par minute et par jour." : "Clé Anthropic enregistrée.") : (gm ? "Il manque la clé Gemini (gratuite sur aistudio.google.com)." : "Il manque la clé Anthropic."), "jouer.html#reglages", "Régler");
   row(docsOk ? "ok" : "ko", "Documents du meneur", docsOk ? "Brief, fiche système et fiche scénario chargés dans l'app." : "Charge le brief, la fiche système et la fiche scénario dans l'app.", "jouer.html#reglages", "Charger");
   if (!keyOk) blocking++; if (!docsOk) blocking++;
 }
@@ -240,7 +242,7 @@ if (engine === "pi"){
   row("wa", "Voix : muet", "L'app affichera le texte sans le lire.", "jouer.html#reglages", "Changer");
 }
 
-if (brain !== "paste"){
+if (brain === "api"){
   const c = get("cost", 0);
   row("in", "Coût de la partie en cours", c ? `Environ ${(+c).toFixed(2)} $ (estimation).` : "Rien de consommé pour l'instant.", "", "");
 }

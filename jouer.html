@@ -93,9 +93,14 @@
   <h3>2 · Cerveau (Claude)</h3>
   <div class="row"><label>Mode</label><select id="brain">
     <option value="paste">Mon Projet Claude (copier-coller, gratuit)</option>
-    <option value="api">API Anthropic (automatique, payant)</option>
+    <option value="gemini">Gemini de Google (automatique, gratuit)</option>
+    <option value="api">API Anthropic / Claude (automatique, payant)</option>
   </select></div>
-  <p class="note">Mode copier-coller : tu joues dans ton Projet Claude (avec le brief, la fiche système et la fiche scénario), tu copies chaque réponse de la Voix et tu la colles ici. L'app la lit avec les voix des PNJ. Les documents et la clé Anthropic ci-dessous ne servent qu'au mode API.</p>
+  <p class="note">Copier-coller : tu joues dans ton Projet Claude et tu colles chaque réponse ici. Gemini et Claude : l'app parle elle-même au meneur, sans copier-coller ; il faut alors charger les documents ci-dessus et une clé.</p>
+  <div class="row"><label>Clé Gemini</label><input type="password" id="kGM" placeholder="AIza..."></div>
+  <div class="row"><label>Modèle Gemini</label><select id="gmModel"><option value="">automatique (Flash gratuit)</option></select></div>
+  <div class="tools" style="margin-top:0"><button id="gmLoad">⟳ Charger les modèles Gemini</button></div>
+  <p class="note">Clé gratuite sur aistudio.google.com › Get API key. L'offre gratuite a des limites par minute et par jour : si l'une est atteinte, l'app essaie automatiquement un autre modèle Flash. Contrepartie : Google peut utiliser les textes envoyés (dont le scénario) pour améliorer ses produits.</p>
   <div class="row"><label>Clé Anthropic</label><input type="password" id="kAN" placeholder="sk-ant-..."></div>
   <div class="row"><label>Modèle</label><select id="model">
     <option value="claude-sonnet-5-5">Sonnet 5.5 (recommandé)</option>
@@ -147,9 +152,10 @@
 
 <script>
 /* ---------------- version ---------------- */
-const APP_VERSION = "2.2";
+const APP_VERSION = "2.3";
 const APP_DATE = "18/11/2026";
 const CHANGELOG = [
+  ["2.3", "Nouveau meneur gratuit et automatique : Gemini de Google (sans copier-coller)"],
   ["2.2", "Mode automatique facilité : choix de fichiers sans filtre (iPhone), coût estimé de la partie, réglages ouverts si quelque chose manque"],
   ["2.1", "Bouton « Mettre à jour » et vérification automatique des nouvelles versions"],
   ["2.0", "Bouton ⌂ vers le tableau de bord ; les réglages s'ouvrent directement depuis le tableau de bord"],
@@ -333,7 +339,7 @@ function costEstimate(){
 }
 function showCost(){
   const el = document.getElementById("costLine"); if (!el) return;
-  el.textContent = usage.in || usage.out ? `Partie en cours : environ ${costEstimate().toFixed(2)} $ consommés (${usage.in + usage.cached + (usage.written||0)} jetons envoyés, ${usage.out} reçus). Estimation, le vrai montant est sur console.anthropic.com.` : "";
+  el.textContent = (usage.in || usage.out) && $("#brain").value === "api" ? `Partie en cours : environ ${costEstimate().toFixed(2)} $ consommés (${usage.in + usage.cached + (usage.written||0)} jetons envoyés, ${usage.out} reçus). Estimation, le vrai montant est sur console.anthropic.com.` : "";
   store.set("cost", +costEstimate().toFixed(3));
 }
 let busy = false;
@@ -392,6 +398,45 @@ async function callClaude(){
 }
 
 function pasteMode(){ return $("#brain").value === "paste"; }
+function brainKeyOk(){ return $("#brain").value === "gemini" ? !!$("#kGM").value.trim() : !!$("#kAN").value.trim(); }
+
+/* ---------------- Gemini (gratuit) ---------------- */
+const GM_FALLBACK = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-2.5-flash", "gemini-2.5-flash-lite"];
+function gmCandidates(){
+  const listed = store.get("gmModels", []);
+  const base = listed.length ? listed : GM_FALLBACK;
+  const chosen = $("#gmModel").value;
+  const first = chosen || store.get("gmLastModel", "");  // le dernier modèle qui a marché passe en premier
+  return first ? [first].concat(base.filter(m => m !== first)) : base;
+}
+async function callGemini(){
+  const key = $("#kGM").value.trim();
+  if (!key) throw new Error("Clé Gemini manquante (⚙ › Cerveau). Elle est gratuite sur aistudio.google.com.");
+  const body = {
+    systemInstruction: { parts: [{ text: systemPrompt() }] },
+    contents: history.map(m => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
+    generationConfig: { maxOutputTokens: 2048, temperature: 0.9 }
+  };
+  let lastErr = "";
+  for (const model of gmCandidates().slice(0, 4)){
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+      method: "POST", headers: { "x-goog-api-key": key, "Content-Type": "application/json" }, body: JSON.stringify(body)
+    });
+    if (r.ok){
+      const j = await r.json();
+      const text = ((j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts) || []).map(p => p.text || "").join("");
+      if (!text) throw new Error("Gemini n'a rien répondu" + (j.candidates && j.candidates[0] && j.candidates[0].finishReason ? " (" + j.candidates[0].finishReason + ")" : "") + ". Réessaie ou reformule.");
+      if (store.get("gmLastModel", "") !== model){ store.set("gmLastModel", model); sys("Meneur : " + model + " (gratuit)."); }
+      return text;
+    }
+    let msg = ""; try{ msg = ((await r.json()).error || {}).message || ""; }catch(e){}
+    lastErr = `Gemini ${r.status} (${model})` + (msg ? " : " + msg.slice(0, 160) : "");
+    if (r.status === 429 || r.status === 404 || r.status === 403 && /model|access|permission/i.test(msg)) continue; // limite atteinte ou modèle indisponible : modèle suivant
+    if (r.status === 400 && /API key/i.test(msg)) throw new Error("Clé Gemini refusée : recopie-la depuis aistudio.google.com.");
+    throw new Error(lastErr);
+  }
+  throw new Error(lastErr + " → limite gratuite atteinte sur les modèles essayés. Attends une minute (ou demain pour la limite par jour), ou choisis un autre modèle dans ⚙.");
+}
 function updateMode(){
   const p = pasteMode();
   $("#txt").placeholder = p ? "Colle ici la réponse de la Voix…" : "Archie : je montre ma carte de presse…";
@@ -417,7 +462,7 @@ async function turn(userText){
   addMsg("me", esc(userText));
   setMood("réfléchit…"); thinking(true);
   try{
-    const text = await callClaude();
+    const text = $("#brain").value === "gemini" ? await callGemini() : await callClaude();
     history.push({role:"assistant", content:text});
     store.set("history", history);
     renderMJ(text, true);
@@ -615,7 +660,8 @@ $("#jet").onclick = () => $("#jet").style.display = "none";
 function openSet(){ $("#drawer").classList.add("open"); }
 $("#openSet").onclick = openSet;
 $("#closeSet").onclick = () => $("#drawer").classList.remove("open");
-["kAN","kOA","kEL","model","engine","fx","elModel","autoSend","brain","vsUrl","vsPin","vsInstruct"].forEach(k => {
+renderGmModels();
+["kAN","kOA","kEL","model","engine","fx","elModel","autoSend","brain","vsUrl","vsPin","vsInstruct","kGM","gmModel"].forEach(k => {
   const el = $("#"+k); const v = store.get(k, null); if (v !== null) el.value = v;
   el.addEventListener("change", () => { store.set(k, el.value.trim()); if (k === "brain") updateMode(); });
 });
@@ -651,7 +697,29 @@ $("#vsLoad").onclick = async () => {
   } catch(err){ sys(err.message, true); }
   finally{ $("#vsLoad").disabled = false; $("#vsLoad").textContent = "⟳ Charger mes voix VoiceStudio"; }
 };
-$("#forget").onclick = () => { ["kAN","kOA","kEL"].forEach(k => { $("#"+k).value = ""; store.set(k, ""); }); sys("Clés effacées de cet appareil."); };
+$("#gmLoad").onclick = async () => {
+  const key = $("#kGM").value.trim(); store.set("kGM", key);
+  if (!key){ sys("Colle d'abord ta clé Gemini.", true); return; }
+  $("#gmLoad").disabled = true;
+  try{
+    const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=200", { headers: { "x-goog-api-key": key } });
+    if (!r.ok) throw new Error("Gemini répond " + r.status + " : vérifie la clé.");
+    const j = await r.json();
+    const models = (j.models || []).filter(m => (m.supportedGenerationMethods || []).includes("generateContent"))
+      .map(m => m.name.replace(/^models\//, ""))
+      .filter(n => /flash/i.test(n) && !/image|tts|audio|live|embed|vision/i.test(n))
+      .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+    if (!models.length) throw new Error("Aucun modèle Flash disponible avec cette clé.");
+    store.set("gmModels", models); renderGmModels();
+    sys(`✔ ${models.length} modèles Gemini Flash disponibles. « automatique » essaie les plus récents d'abord.`);
+  }catch(err){ sys(err.message, true); }
+  finally{ $("#gmLoad").disabled = false; }
+};
+function renderGmModels(){
+  const cur = store.get("gmModel", "");
+  $("#gmModel").innerHTML = `<option value="">automatique (Flash gratuit)</option>` + store.get("gmModels", []).map(m => `<option ${m===cur?"selected":""}>${m}</option>`).join("");
+}
+$("#forget").onclick = () => { ["kAN","kOA","kEL","kGM"].forEach(k => { $("#"+k).value = ""; store.set(k, ""); }); sys("Clés effacées de cet appareil."); };
 
 /* horloge */
 const t0 = Date.now();
@@ -663,17 +731,17 @@ $("#verNote").textContent = `App de jeu v${APP_VERSION} du ${APP_DATE}. Si ce nu
 $("#changelog").innerHTML = CHANGELOG.map(([v, t]) => `<li><b>v${v}</b> : ${t}</li>`).join("");
 renderDocs(); renderElCast(); renderVsCast(); showCost();
 if (location.hash === "#reglages") openSet();
-else if (!pasteMode() && (!docsReady() || !store.get("kAN", "")) && !history.length){ openSet(); }
+else if (!pasteMode() && (!docsReady() || !brainKeyOk()) && !history.length){ openSet(); }
 if (history.length){
   sys(`Partie reprise (${history.length} échanges). Consommation jusqu'ici : ${usage.in} jetons envoyés, ${usage.cached} relus en cache, ${usage.out} reçus.`);
   history.forEach(m => m.role === "user" ? addMsg("me", esc(m.content)) : renderMJ(m.content, false));
 } else if (pasteMode()){
   sys("Mode copier-coller : joue dans ton Projet Claude, copie chaque réponse de la Voix, puis touche « 📋 Coller et lire » (ou colle-la en bas et touche ➤). Voix réglées dans ⚙.");
-} else if (!docsReady() || !store.get("kAN","")){
-  sys("Bienvenue. Ouvre ⚙ pour charger les documents du MJ et ta clé Anthropic, puis touche « ▶ Lancer la partie ».");
+} else if (!docsReady() || !brainKeyOk()){
+  sys("Bienvenue. Ouvre ⚙ pour charger les documents du MJ et la clé du meneur (Gemini gratuit ou Claude), puis touche « ▶ Lancer la partie ».");
 } else sys("Prêt. Touche « ▶ Lancer la partie ».");
 </script>
 <script>window.MJV_PAGE = { name: "jeu", version: APP_VERSION };</script>
-<script src="maj.js?v=2.2"></script>
+<script src="maj.js?v=2.3"></script>
 </body>
 </html>
