@@ -1,10 +1,12 @@
 # Historique des versions
 
 ## Tableau de bord (`index.html`)
+- **v1.2** : coût estimé de la partie en mode automatique.
 - **v1.1** : bouton « Mettre à jour », tableau des versions publiées, liens toujours vers la dernière version.
 - **v1.0** : état de préparation en direct (cerveau, voix, partie en cours), schéma du fonctionnement, étapes pour jouer, pièces du projet, décisions, aide et lexique.
 
 ## App de jeu (`jouer.html`)
+- **v2.2** : mode automatique facilité (choix des fichiers sur iPhone, coût estimé, réglages ouverts si quelque chose manque).
 - **v2.1** : bouton « Vérifier les mises à jour » (⚙ › Version) et vérification automatique.
 - **v2.0** : bouton ⌂ vers le tableau de bord ; les réglages s'ouvrent directement depuis le tableau de bord.
 - **v1.9** : VoiceStudio utilise une voix standard par défaut si aucune voix n'est choisie ; les voix personnelles s'ajoutent à la liste.

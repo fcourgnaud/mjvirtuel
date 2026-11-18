@@ -180,8 +180,8 @@
   </footer>
 </div>
 
-<script>window.MJV_PAGE = { name: "tableau", version: "1.1" };</script>
-<script src="maj.js?v=1.1"></script>
+<script>window.MJV_PAGE = { name: "tableau", version: "1.2" };</script>
+<script src="maj.js?v=1.2"></script>
 <script>
 document.getElementById("dashVer").textContent = "v" + MJV_PAGE.version;
 // versions publiées : tableau des versions + liens toujours vers la dernière version
@@ -240,6 +240,10 @@ if (engine === "pi"){
   row("wa", "Voix : muet", "L'app affichera le texte sans le lire.", "jouer.html#reglages", "Changer");
 }
 
+if (brain !== "paste"){
+  const c = get("cost", 0);
+  row("in", "Coût de la partie en cours", c ? `Environ ${(+c).toFixed(2)} $ (estimation).` : "Rien de consommé pour l'instant.", "", "");
+}
 const n = history.length;
 row("in", "Partie en cours", n ? `${n} message(s) sauvegardé(s) sur cet appareil : l'app reprendra là où tu t'es arrêté.` : "Aucune partie en cours.", "jouer.html", n ? "Reprendre" : "Commencer");
 

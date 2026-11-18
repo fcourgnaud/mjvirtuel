@@ -87,7 +87,7 @@
 
   <h3>1 · Documents du MJ</h3>
   <ul class="docs" id="docList"></ul>
-  <input type="file" id="docFiles" accept=".md,.txt,text/markdown,text/plain" multiple>
+  <input type="file" id="docFiles" multiple>
   <p class="note">Sélectionne les fichiers .md : brief de l'avatar, fiche système, fiche scénario (la méthode est facultative). Ils sont reconnus d'après leur nom.</p>
 
   <h3>2 · Cerveau (Claude)</h3>
@@ -103,6 +103,7 @@
     <option value="claude-haiku-5-5">Haiku 5.5 (rapide, économique)</option>
   </select></div>
   <p class="note">Clé à créer sur console.anthropic.com › API Keys (avec un peu de crédit). Fixe une limite de dépense.</p>
+  <p class="note" id="costLine"></p>
 
   <h3>3 · Voix</h3>
   <div class="row"><label>Moteur</label><select id="engine">
@@ -146,9 +147,10 @@
 
 <script>
 /* ---------------- version ---------------- */
-const APP_VERSION = "2.1";
+const APP_VERSION = "2.2";
 const APP_DATE = "18/11/2026";
 const CHANGELOG = [
+  ["2.2", "Mode automatique facilité : choix de fichiers sans filtre (iPhone), coût estimé de la partie, réglages ouverts si quelque chose manque"],
   ["2.1", "Bouton « Mettre à jour » et vérification automatique des nouvelles versions"],
   ["2.0", "Bouton ⌂ vers le tableau de bord ; les réglages s'ouvrent directement depuis le tableau de bord"],
   ["1.9", "VoiceStudio : voix standard par défaut si aucune voix n'est choisie, voix personnelles en plus"],
@@ -322,7 +324,18 @@ function systemPrompt(){
 
 /* ---------------- partie ---------------- */
 let history = store.get("history", []);
-let usage = store.get("usage", {in:0, out:0, cached:0});
+let usage = store.get("usage", {in:0, out:0, cached:0, written:0});
+// estimation en $ par million de jetons : entrée, sortie, lecture du cache, écriture du cache
+const RATES = {"claude-sonnet-5-5":[2,10,0.2,2.5], "claude-opus-5-5":[4,20,0.2,5], "claude-haiku-5-5":[0.1,0.5,0.01,0.125]};
+function costEstimate(){
+  const r = RATES[$("#model").value] || RATES["claude-sonnet-5-5"];
+  return (usage.in*r[0] + usage.out*r[1] + usage.cached*r[2] + (usage.written||0)*r[3]) / 1e6;
+}
+function showCost(){
+  const el = document.getElementById("costLine"); if (!el) return;
+  el.textContent = usage.in || usage.out ? `Partie en cours : environ ${costEstimate().toFixed(2)} $ consommés (${usage.in + usage.cached + (usage.written||0)} jetons envoyés, ${usage.out} reçus). Estimation, le vrai montant est sur console.anthropic.com.` : "";
+  store.set("cost", +costEstimate().toFixed(3));
+}
 let busy = false;
 
 function addMsg(role, html, cls){
@@ -374,7 +387,7 @@ async function callClaude(){
   });
   if (!r.ok) throw new Error("Claude "+r.status+" : "+(await r.text()).slice(0,240));
   const j = await r.json();
-  if (j.usage){ usage.in += (j.usage.input_tokens||0); usage.out += (j.usage.output_tokens||0); usage.cached += (j.usage.cache_read_input_tokens||0); store.set("usage", usage); }
+  if (j.usage){ usage.in += (j.usage.input_tokens||0); usage.out += (j.usage.output_tokens||0); usage.cached += (j.usage.cache_read_input_tokens||0); usage.written = (usage.written||0) + (j.usage.cache_creation_input_tokens||0); store.set("usage", usage); showCost(); }
   return (j.content || []).filter(c => c.type === "text").map(c => c.text).join("\n");
 }
 
@@ -593,7 +606,7 @@ $("#journal").onclick = () => pasteMode() ? sys("En mode copier-coller, demande 
 let confirmNew = false;
 $("#newGame").onclick = () => {
   if (!confirmNew){ confirmNew = true; $("#newGame").textContent = "✕ Confirmer ?"; setTimeout(() => { confirmNew = false; $("#newGame").textContent = "✕ Nouvelle partie"; }, 3000); return; }
-  stopAudio(); history = []; store.set("history", history); $("#log").innerHTML = ""; lastParsed = null; $("#jet").style.display = "none";
+  stopAudio(); history = []; store.set("history", history); usage = {in:0, out:0, cached:0, written:0}; store.set("usage", usage); showCost(); $("#log").innerHTML = ""; lastParsed = null; $("#jet").style.display = "none";
   confirmNew = false; $("#newGame").textContent = "✕ Nouvelle partie"; sys("Nouvelle partie prête. Touche « ▶ Lancer la partie ».");
 };
 $("#jet").onclick = () => $("#jet").style.display = "none";
@@ -648,8 +661,9 @@ setInterval(() => { const s = Math.floor((Date.now()-t0)/1000); $("#clock").text
 $("#ver").textContent = "v" + APP_VERSION;
 $("#verNote").textContent = `App de jeu v${APP_VERSION} du ${APP_DATE}. Si ce numéro ne correspond pas à la dernière version envoyée, ferme l'onglet et rouvre-le (ou attends quelques minutes que GitHub se mette à jour).`;
 $("#changelog").innerHTML = CHANGELOG.map(([v, t]) => `<li><b>v${v}</b> : ${t}</li>`).join("");
-renderDocs(); renderElCast(); renderVsCast();
+renderDocs(); renderElCast(); renderVsCast(); showCost();
 if (location.hash === "#reglages") openSet();
+else if (!pasteMode() && (!docsReady() || !store.get("kAN", "")) && !history.length){ openSet(); }
 if (history.length){
   sys(`Partie reprise (${history.length} échanges). Consommation jusqu'ici : ${usage.in} jetons envoyés, ${usage.cached} relus en cache, ${usage.out} reçus.`);
   history.forEach(m => m.role === "user" ? addMsg("me", esc(m.content)) : renderMJ(m.content, false));
@@ -660,6 +674,6 @@ if (history.length){
 } else sys("Prêt. Touche « ▶ Lancer la partie ».");
 </script>
 <script>window.MJV_PAGE = { name: "jeu", version: APP_VERSION };</script>
-<script src="maj.js?v=2.1"></script>
+<script src="maj.js?v=2.2"></script>
 </body>
 </html>

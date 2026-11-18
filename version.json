@@ -1,8 +1,8 @@
 {
-  "tableau": "1.1",
-  "jeu": "2.1",
+  "tableau": "1.2",
+  "jeu": "2.2",
   "banc": "1.4",
   "serveur": "1.0",
   "date": "18/11/2026",
-  "notes": "Bouton « Mettre à jour » et vérification automatique des nouvelles versions."
+  "notes": "Jouer sans copier-coller (mode automatique) : plus simple à régler, coût estimé affiché."
 }
