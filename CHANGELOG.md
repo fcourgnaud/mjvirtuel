@@ -1,9 +1,11 @@
 # Historique des versions
 
 ## Tableau de bord (`index.html`)
+- **v1.1** : bouton « Mettre à jour », tableau des versions publiées, liens toujours vers la dernière version.
 - **v1.0** : état de préparation en direct (cerveau, voix, partie en cours), schéma du fonctionnement, étapes pour jouer, pièces du projet, décisions, aide et lexique.
 
 ## App de jeu (`jouer.html`)
+- **v2.1** : bouton « Vérifier les mises à jour » (⚙ › Version) et vérification automatique.
 - **v2.0** : bouton ⌂ vers le tableau de bord ; les réglages s'ouvrent directement depuis le tableau de bord.
 - **v1.9** : VoiceStudio utilise une voix standard par défaut si aucune voix n'est choisie ; les voix personnelles s'ajoutent à la liste.
 - **v1.8** : VoiceStudio passe par le serveur local du Mac (`serveur-mj.py`), sur le Mac comme sur le téléphone.
@@ -17,6 +19,7 @@
 - **v1.0** : avatar, voix, dictée, sauvegarde de la partie.
 
 ## Banc d'essai des voix (`banc.html`)
+- **v1.4** : bouton « MAJ », retour au tableau de bord.
 - **v1.3** : lecture audio fiable sur iPhone.
 - **v1.2** : lien vers l'app de jeu.
 - **v1.1** : voix Piper (gratuites, hors ligne).

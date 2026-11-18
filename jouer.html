@@ -138,6 +138,7 @@
 
   <h3>Version</h3>
   <p class="note" id="verNote"></p>
+  <div class="tools" style="margin-top:0"><button data-maj>⟳ Vérifier les mises à jour</button></div>
   <ul class="note" id="changelog" style="padding-left:18px;margin:4px 0"></ul>
 
   <div class="tools"><button id="closeSet" class="main">Fermer</button><button id="forget">Effacer les clés</button></div>
@@ -145,9 +146,10 @@
 
 <script>
 /* ---------------- version ---------------- */
-const APP_VERSION = "2.0";
+const APP_VERSION = "2.1";
 const APP_DATE = "18/11/2026";
 const CHANGELOG = [
+  ["2.1", "Bouton « Mettre à jour » et vérification automatique des nouvelles versions"],
   ["2.0", "Bouton ⌂ vers le tableau de bord ; les réglages s'ouvrent directement depuis le tableau de bord"],
   ["1.9", "VoiceStudio : voix standard par défaut si aucune voix n'est choisie, voix personnelles en plus"],
   ["1.8", "VoiceStudio via le serveur local du Mac (serveur-mj.py) : marche sur le Mac et sur le téléphone"],
@@ -657,5 +659,7 @@ if (history.length){
   sys("Bienvenue. Ouvre ⚙ pour charger les documents du MJ et ta clé Anthropic, puis touche « ▶ Lancer la partie ».");
 } else sys("Prêt. Touche « ▶ Lancer la partie ».");
 </script>
+<script>window.MJV_PAGE = { name: "jeu", version: APP_VERSION };</script>
+<script src="maj.js?v=2.1"></script>
 </body>
 </html>
