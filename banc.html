@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Banc d'essai des voix — MJ virtuel</title>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0c0c0a;--panel:#151512;--line:#2a2a24;--ink:#e8e4d4;--dim:#8c8774;--rec:#e0322b;--amber:#e8b04a;--oa:#7fd3c0;--el:#c6a4ff;--pi:#f0a35e}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:14px}
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:50;background:repeating-linear-gradient(to bottom,rgba(255,255,255,.025) 0 1px,transparent 1px 3px)}
+  .wrap{max-width:1100px;margin:0 auto;padding:20px 16px 60px}
+  header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:18px}
+  h1{font-family:"VT323",monospace;font-weight:400;font-size:42px;margin:0;line-height:1;letter-spacing:2px}
+  h1 small{display:block;font-size:20px;color:var(--dim)}
+  .osd{font-family:"VT323",monospace;font-size:22px;display:flex;gap:14px;align-items:center}
+  .dot{width:12px;height:12px;border-radius:50%;background:var(--rec);box-shadow:0 0 10px var(--rec);animation:b 1.2s steps(2) infinite;display:inline-block;margin-right:6px}
+  @keyframes b{50%{opacity:0}}
+  details.keys{background:var(--panel);border:1px solid var(--line);padding:12px 14px;margin-bottom:14px}
+  details.keys summary{cursor:pointer;font-family:"VT323",monospace;font-size:22px}
+  .krow{display:grid;grid-template-columns:150px 1fr auto;gap:8px;align-items:center;margin-top:10px}
+  input[type=password],input[type=text],select,textarea{font:inherit;background:#0a0a08;color:var(--ink);border:1px solid var(--line);padding:7px;width:100%}
+  textarea{resize:vertical;min-height:72px}
+  button{font:inherit;background:transparent;color:var(--ink);border:1px solid var(--line);padding:8px 10px;cursor:pointer;white-space:nowrap}
+  button:hover{border-color:var(--dim)}
+  button.oa{border-color:var(--oa);color:var(--oa)} button.el{border-color:var(--el);color:var(--el)}
+  button:disabled{opacity:.4;cursor:default}
+  .bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px;background:var(--panel);border:1px solid var(--line);padding:10px 14px}
+  .bar label{color:var(--dim);font-size:12px}
+  .bar select{width:auto}
+  .note{color:var(--dim);font-size:12px;line-height:1.5}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}
+  .card{background:var(--panel);border:1px solid var(--line);padding:14px;display:flex;flex-direction:column;gap:8px;position:relative}
+  .card.playing{border-color:var(--rec)}
+  .card h2{font-family:"VT323",monospace;font-weight:400;font-size:28px;margin:0;line-height:1}
+  .role{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:1px}
+  .lbl{color:var(--dim);font-size:11px;margin-bottom:-4px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .two > div{display:flex;flex-direction:column;gap:6px}
+  .tag{font-size:11px} .tag.oa{color:var(--oa)} .tag.el{color:var(--el)} .tag.pi{color:var(--pi)}
+  button.pi{border-color:var(--pi);color:var(--pi)}
+  .svc{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+  .svc > div{display:flex;flex-direction:column;gap:6px}
+  .rng{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dim)} .rng input{flex:1;accent-color:var(--pi)}
+  #piStatus{font-size:12px;color:var(--pi)}
+  .actions{display:flex;gap:8px;flex-wrap:wrap}
+  .meta{font-size:11px;color:var(--dim);min-height:14px}
+  .err{color:var(--rec)}
+  #log{margin-top:20px;font-size:12px;color:var(--dim);white-space:pre-wrap}
+  .stat{font-size:12px;color:var(--amber)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>BANC D'ESSAI DES VOIX<small>MJ virtuel · Southern Gothic · OpenAI · ElevenLabs · Piper · <span id="ver"></span></small></h1>
+    <div class="osd"><span><span class="dot"></span>REC</span><span id="spend" class="stat"></span><a href="jouer.html" style="color:var(--rec);text-decoration:none;border:1px solid var(--rec);padding:0 8px">▶ JOUER</a></div>
+  </header>
+
+  <details class="keys" id="keysBox">
+    <summary>🔑 Clés API (gardées uniquement sur cet appareil)</summary>
+    <div class="krow"><label for="kOA">OpenAI</label><input type="password" id="kOA" placeholder="sk-..." autocomplete="off"><button id="tOA">Tester</button></div>
+    <div class="krow"><label for="kEL">ElevenLabs</label><input type="password" id="kEL" placeholder="sk_..." autocomplete="off"><button id="tEL">Charger mes voix</button></div>
+    <p class="note">Les clés sont stockées dans le navigateur de cet appareil, jamais dans le code de la page. Ne les partagez pas, et fixez une limite de dépense chez chaque service.</p>
+    <button id="forget">Effacer les clés de cet appareil</button>
+  </details>
+
+  <div class="bar">
+    <label>Effet<br><select id="fx">
+      <option value="none">Aucun (voix brute)</option>
+      <option value="vhs" selected>Bande VHS</option>
+      <option value="phone">Téléphone / talkie</option>
+      <option value="tape">Magnétophone usé</option>
+      <option value="vision">Vision (ralenti, écho)</option>
+    </select></label>
+    <label>Modèle ElevenLabs<br><select id="elModel">
+      <option value="eleven_multilingual_v2">Multilingual v2 (qualité)</option>
+      <option value="eleven_flash_v2_5">Flash v2.5 (rapide, ½ crédit)</option>
+      <option value="eleven_v3">v3 (le plus expressif)</option>
+    </select></label>
+    <button id="stop">■ Stop</button>
+    <span class="note">Chaque génération est mise en cache : réécouter ne coûte rien. Changer le texte, la voix ou la consigne régénère.</span>
+  </div>
+
+  <div class="bar">
+    <button class="pi" id="piInstall">⬇ Installer Piper (voix hors ligne)</button>
+    <span id="piStatus">Piper : non installé. Gratuit, tourne sur l'appareil, ~60 Mo par voix (téléchargées une seule fois).</span>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div id="log"></div>
+</div>
+
+<script>
+const APP_VERSION = "1.3";  // banc d'essai
+const APP_DATE = "01/11/2026";
+// v1.3 lecture audio fiable sur iPhone · v1.2 lien vers l'app de jeu · v1.1 Piper · v1.0 OpenAI et ElevenLabs
+const CAST = [
+  {id:"narrateur", ton:0.92, name:"La Voix", role:"Narrateur · voix off", g:"male", oa:"onyx",
+   dir:"Voix off de documentaire paranormal. Grave, posée, lente, avec de vrais silences entre les phrases. Sobre et inquiétante.",
+   line:"Bande numéro douze. Silent Peaks, Nevada. Vingt-deux heures trente. Ce que vous allez voir n'a jamais été diffusé."},
+  {id:"gorge_profonde", ton:1.12, name:"Gorge Profonde", role:"Légiste, 27 ans", g:"male", oa:"echo",
+   dir:"Jeune homme très nerveux, débit rapide, petits rires gênés, chuchote comme s'il avait peur d'être entendu.",
+   line:"Vous êtes en retard ! Non, non, pas mon visage, on avait dit flouté, hein ? Venez, venez, il est dans le tiroir six."},
+  {id:"jerry", ton:0.88, name:"Jerry Silverman", role:"Concierge, 57 ans", g:"male", oa:"verse",
+   dir:"Homme mûr bourru, voix éraillée, ensommeillé, soupire, mais finit par être serviable.",
+   line:"Les flics sont déjà passés. Je leur ai pas dit grand-chose. Bon… qu'est-ce que vous voulez savoir ?"},
+  {id:"sansom", ton:1.05, name:"Sansom Murphy", role:"Employé du chenil, 37 ans", g:"male", oa:"fable",
+   dir:"Homme maniéré et bavard, ton mielleux et complice, un brin vénal quand il parle d'argent.",
+   line:"Jason ? Un amour, vraiment. Bon… j'ai peut-être gardé une petite copie de la vidéo. Mais ça a un prix, mes chéris."},
+  {id:"samantha", ton:1.04, name:"Samantha Washington", role:"Manager du StarClub, 29 ans", g:"female", oa:"coral",
+   dir:"Femme autoritaire et cassante qui bascule d'un coup vers un ton publicitaire enjoué et faux.",
+   line:"Pas comme ça, le gobelet ! … Oh, une caméra ? Bienvenue au StarClub Café, où chaque matin est une étoile !"},
+  {id:"leslie", ton:1.0, name:"Leslie Vines", role:"Serveuse, 33 ans", g:"female", oa:"shimmer",
+   dir:"Jeune femme terrifiée et confuse, voix tremblante, hésitations. Une peur un peu trop jouée.",
+   line:"Il est entré ce matin… je me suis cachée… Je ne sais même plus quel jour on est."},
+  {id:"gassama", ton:0.95, name:"Professeur Gassama", role:"Marabout, 47 ans", g:"male", oa:"ballad",
+   dir:"Homme chaleureux, rire franc, voix ample et généreuse, solennel quand il parle de protection.",
+   line:"Entrez, entrez, mes amis ! Mais d'abord, laissez-moi vous protéger. On ne parle pas de ces choses-là sans protection."},
+  {id:"jacob", ton:0.82, name:"Jacob Callahan", role:"Éleveur, 53 ans", g:"male", oa:"ash",
+   dir:"Homme rural, très économe en mots. Voix basse, calme, froide et menaçante. Aucune émotion.",
+   line:"Partez. Ce qui appartient aux Callahan reste aux Callahan."},
+  {id:"lynn", ton:0.93, name:"Lynn Callahan", role:"Mère au foyer, 50 ans", g:"female", oa:"sage",
+   dir:"Femme polie et douce, absente, en deuil. Sous la politesse, quelque chose d'inquiétant.",
+   line:"Un peu de café ? Mon mari est à l'étable. Il ne parle plus beaucoup, depuis Jason."}
+];
+const OA_VOICES = ["alloy","ash","ballad","cedar","coral","echo","fable","marin","nova","onyx","sage","shimmer","verse"];
+const FR_PREFIX = "Parle en français de France, sans accent étranger. ";
+
+const $ = s => document.querySelector(s);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem("mjv_"+k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem("mjv_"+k, JSON.stringify(v)); }catch(e){} }
+};
+let state = store.get("cast", {});
+let elVoices = store.get("elVoices", []);
+let spend = store.get("spend", {oa:0, el:0});
+const cache = new Map();
+let ctx = null, current = null;
+
+function log(m, isErr){ const l=$("#log"); l.innerHTML = (isErr?'<span class="err">':'')+m+(isErr?'</span>':'')+"\n"+l.innerHTML; }
+function showSpend(){ $("#spend").textContent = `OpenAI ≈ ${spend.oa.toFixed(1)} min · ElevenLabs ${spend.el} car.`; }
+
+function cfg(id){
+  const c = CAST.find(x=>x.id===id);
+  state[id] = Object.assign({line:c.line, dir:c.dir, oa:c.oa, el:"", pi:"", ton:c.ton}, state[id]||{});
+  return state[id];
+}
+function save(){ store.set("cast", state); }
+
+function assignElDefaults(){
+  if (!elVoices.length) return;
+  const used = new Set();
+  CAST.forEach(c => {
+    const s = cfg(c.id);
+    if (s.el && elVoices.some(v=>v.id===s.el)) { used.add(s.el); return; }
+    const pool = elVoices.filter(v => v.gender === c.g && !used.has(v.id));
+    const pick = pool[0] || elVoices.find(v=>!used.has(v.id)) || elVoices[0];
+    s.el = pick.id; used.add(pick.id);
+  });
+  save();
+}
+
+function render(){
+  $("#grid").innerHTML = CAST.map(c => {
+    const s = cfg(c.id);
+    const oaOpts = OA_VOICES.map(v=>`<option ${v===s.oa?"selected":""}>${v}</option>`).join("");
+    const elOpts = elVoices.length
+      ? elVoices.map(v=>`<option value="${v.id}" ${v.id===s.el?"selected":""}>${v.name}${v.gender?" ("+(v.gender==="male"?"♂":v.gender==="female"?"♀":"·")+")":""}</option>`).join("")
+      : `<option value="">— chargez vos voix ElevenLabs —</option>`;
+    const piOpts = piVoices.length
+      ? piVoices.map(v=>`<option value="${v.key}" ${v.key===s.pi?"selected":""}>${v.label}</option>`).join("")
+      : `<option value="">— installez Piper —</option>`;
+    return `<article class="card" id="c-${c.id}">
+      <div><div class="role">${c.role}</div><h2>${c.name}</h2></div>
+      <div class="lbl">Réplique</div><textarea data-id="${c.id}" data-k="line">${s.line}</textarea>
+      <div class="lbl">Consigne de jeu</div><textarea data-id="${c.id}" data-k="dir">${s.dir}</textarea>
+      <div class="svc">
+        <div><span class="tag oa">● OpenAI</span><select data-id="${c.id}" data-k="oa">${oaOpts}</select><button class="oa" data-go="oa" data-id="${c.id}">▶ OpenAI</button></div>
+        <div><span class="tag el">● ElevenLabs</span><select data-id="${c.id}" data-k="el">${elOpts}</select><button class="el" data-go="el" data-id="${c.id}">▶ ElevenLabs</button></div>
+        <div><span class="tag pi">● Piper (hors ligne)</span><select data-id="${c.id}" data-k="pi">${piOpts}</select>
+          <label class="rng">Ton <input type="range" min="0.7" max="1.3" step="0.01" value="${s.ton}" data-id="${c.id}" data-k="ton"><output>${(+s.ton).toFixed(2)}</output></label>
+          <button class="pi" data-go="pi" data-id="${c.id}">▶ Piper</button></div>
+      </div>
+      <div class="meta" id="m-${c.id}"></div>
+    </article>`;
+  }).join("");
+}
+
+document.addEventListener("input", e => {
+  const {id, k} = e.target.dataset; if (!id || !k) return;
+  cfg(id)[k] = k === "ton" ? +e.target.value : e.target.value; save();
+  if (k === "ton" && e.target.nextElementSibling) e.target.nextElementSibling.textContent = (+e.target.value).toFixed(2);
+});
+
+/* ---------- Audio + effets ---------- */
+function ensureCtx(){
+  if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+  // iPhone : jouer même en mode silencieux, et réveiller l'audio après un passage dans une autre app
+  try{ if (navigator.audioSession) navigator.audioSession.type = "playback"; }catch(e){}
+  if (ctx.state !== "running"){ try{ ctx.resume(); }catch(e){} }
+  try{ const b = ctx.createBuffer(1, 1, 22050), s = ctx.createBufferSource(); s.buffer = b; s.connect(ctx.destination); s.start(0); }catch(e){}
+  return ctx;
+}
+function noiseBuffer(sec){
+  const b = ctx.createBuffer(1, ctx.sampleRate*sec, ctx.sampleRate), d = b.getChannelData(0);
+  for (let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
+  return b;
+}
+function curve(amount){
+  const n=2048, c=new Float32Array(n);
+  for (let i=0;i<n;i++){ const x=i*2/n-1; c[i]=((1+amount)*x)/(1+amount*Math.abs(x)); }
+  return c;
+}
+function stopAll(){
+  if (current){ current.forEach(n=>{ try{ n.stop(); }catch(e){} }); current=null; }
+  document.querySelectorAll(".card").forEach(c=>c.classList.remove("playing"));
+}
+function play(buffer, id, rate){
+  stopAll();
+  const fx = $("#fx").value;
+  const src = ctx.createBufferSource(); src.buffer = buffer;
+  const baseRate = rate || 1; src.playbackRate.value = baseRate;
+  const out = ctx.createGain(); out.gain.value = 1; out.connect(ctx.destination);
+  const nodes = [src];
+  let chainEnd;
+
+  if (fx === "none"){
+    src.connect(out);
+  } else {
+    const hp = ctx.createBiquadFilter(); hp.type="highpass";
+    const lp = ctx.createBiquadFilter(); lp.type="lowpass";
+    const sh = ctx.createWaveShaper();
+    let hiss = 0.012, wow = 0.0015, wowRate = 0.6, drive = 4;
+    if (fx==="vhs"){ hp.frequency.value=180; lp.frequency.value=5200; drive=5; hiss=.014; }
+    if (fx==="phone"){ hp.frequency.value=400; lp.frequency.value=3200; drive=18; hiss=.006; wow=0; }
+    if (fx==="tape"){ hp.frequency.value=140; lp.frequency.value=3800; drive=8; hiss=.03; wow=.004; wowRate=.9; }
+    if (fx==="vision"){ hp.frequency.value=90; lp.frequency.value=2600; drive=3; hiss=.01; wow=.003; wowRate=.25; src.playbackRate.value = baseRate*.86; }
+    sh.curve = curve(drive);
+
+    // pleurage (wow) : retard modulé
+    const dl = ctx.createDelay(0.1); dl.delayTime.value = 0.02;
+    if (wow){
+      const lfo = ctx.createOscillator(); lfo.frequency.value = wowRate;
+      const lg = ctx.createGain(); lg.gain.value = wow;
+      lfo.connect(lg).connect(dl.delayTime); lfo.start(); nodes.push(lfo);
+    }
+    src.connect(dl).connect(hp).connect(lp).connect(sh);
+    chainEnd = sh;
+
+    if (fx==="vision"){
+      const echo = ctx.createDelay(1.5); echo.delayTime.value = .38;
+      const fb = ctx.createGain(); fb.gain.value = .42;
+      chainEnd.connect(echo); echo.connect(fb).connect(echo); echo.connect(out);
+    }
+    chainEnd.connect(out);
+
+    // souffle de bande
+    const n = ctx.createBufferSource(); n.buffer = noiseBuffer(2); n.loop = true;
+    const nf = ctx.createBiquadFilter(); nf.type="bandpass"; nf.frequency.value=3000; nf.Q.value=.6;
+    const ng = ctx.createGain(); ng.gain.value = hiss;
+    n.connect(nf).connect(ng).connect(out); n.start(); nodes.push(n);
+  }
+  src.onended = () => { stopAll(); };
+  src.start();
+  current = nodes;
+  const card = document.getElementById("c-"+id); card && card.classList.add("playing");
+}
+
+/* ---------- Piper (sur l'appareil) ---------- */
+let piper = null, piVoices = store.get("piVoices", []);
+const PIPER_SRC = [
+  "https://cdn.jsdelivr.net/npm/@mintplex-labs/piper-tts-web@1.0.4/+esm",
+  "https://esm.sh/@mintplex-labs/piper-tts-web@1.0.4"
+];
+async function loadPiper(){
+  if (piper) return piper;
+  let lastErr;
+  for (const url of PIPER_SRC){
+    try { piper = await import(url); return piper; } catch(e){ lastErr = e; }
+  }
+  throw new Error("Impossible de charger Piper : " + (lastErr && lastErr.message));
+}
+function piStatus(t){ $("#piStatus").textContent = t; }
+function assignPiDefaults(){
+  if (!piVoices.length) return;
+  const pick = (prefs) => { for (const p of prefs){ const v = piVoices.find(x => x.key.includes(p)); if (v) return v.key; } return piVoices[0].key; };
+  const male = pick(["tom-medium","gilles","mls-medium","mls"]);
+  const female = pick(["siwis-medium","upmc","siwis"]);
+  CAST.forEach(c => { const s = cfg(c.id); if (!s.pi || !piVoices.some(v=>v.key===s.pi)) s.pi = c.g === "female" ? female : male; });
+  save();
+}
+$("#piInstall").onclick = async () => {
+  const btn = $("#piInstall"); btn.disabled = true;
+  try{
+    piStatus("Chargement du moteur Piper…");
+    const tts = await loadPiper();
+    const all = await tts.voices();
+    const list = (Array.isArray(all) ? all : Object.values(all)).filter(v => (v.key||"").startsWith("fr_FR"));
+    if (!list.length) throw new Error("Aucune voix française trouvée dans le catalogue Piper.");
+    piVoices = list.map(v => ({ key: v.key, label: v.key.replace("fr_FR-","").replace(/-/g," · ") }));
+    store.set("piVoices", piVoices);
+    assignPiDefaults();
+    const needed = [...new Set(CAST.map(c => cfg(c.id).pi))];
+    const already = await tts.stored().catch(() => []);
+    for (const [i, key] of needed.entries()){
+      if (already.includes(key)) continue;
+      await tts.download(key, p => { if (p && p.total) piStatus(`Téléchargement ${i+1}/${needed.length} (${key}) : ${Math.round(p.loaded*100/p.total)} %`); });
+    }
+    render();
+    piStatus(`Piper prêt : ${piVoices.length} voix françaises disponibles, ${needed.length} téléchargée(s) sur l'appareil. Choisir une autre voix la téléchargera au premier essai.`);
+    log("✔ Piper installé.");
+  } catch(err){
+    piStatus("Piper : erreur");
+    log("✘ " + err.message, true);
+  } finally { btn.disabled = false; }
+};
+async function ttsPiper(s){
+  if (!s.pi) throw new Error("Installez d'abord Piper (bouton orange en haut).");
+  const tts = await loadPiper();
+  const wav = await tts.predict({ text: s.line, voiceId: s.pi }, p => { if (p && p.total) piStatus(`Téléchargement de ${s.pi} : ${Math.round(p.loaded*100/p.total)} %`); });
+  return await wav.arrayBuffer();
+}
+
+/* ---------- Services ---------- */
+async function ttsOpenAI(s){
+  const key = $("#kOA").value.trim(); if (!key) throw new Error("Clé OpenAI manquante (menu 🔑).");
+  const r = await fetch("https://api.openai.com/v1/audio/speech", {
+    method:"POST",
+    headers:{ "Authorization":"Bearer "+key, "Content-Type":"application/json" },
+    body: JSON.stringify({ model:"gpt-4o-mini-tts", voice:s.oa, input:s.line, instructions: FR_PREFIX + s.dir, response_format:"mp3" })
+  });
+  if (!r.ok) throw new Error("OpenAI "+r.status+" : "+(await r.text()).slice(0,200));
+  return r.arrayBuffer();
+}
+async function ttsEleven(s){
+  const key = $("#kEL").value.trim(); if (!key) throw new Error("Clé ElevenLabs manquante (menu 🔑).");
+  if (!s.el) throw new Error("Choisissez une voix ElevenLabs (bouton « Charger mes voix »).");
+  const model = $("#elModel").value;
+  const body = { text: s.line, model_id: model, language_code: "fr",
+    voice_settings: { stability: model==="eleven_v3" ? 0.5 : 0.4, similarity_boost: 0.75, style: 0.35 } };
+  if (model !== "eleven_flash_v2_5") delete body.language_code;
+  const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(s.el)}?output_format=mp3_44100_128`, {
+    method:"POST", headers:{ "xi-api-key":key, "Content-Type":"application/json", "Accept":"audio/mpeg" }, body: JSON.stringify(body)
+  });
+  if (!r.ok) throw new Error("ElevenLabs "+r.status+" : "+(await r.text()).slice(0,200));
+  return r.arrayBuffer();
+}
+
+document.addEventListener("click", async e => {
+  const b = e.target.closest("button[data-go]"); if (!b) return;
+  const id = b.dataset.id, svc = b.dataset.go, s = cfg(id), meta = $("#m-"+id);
+  ensureCtx(); // doit se faire pendant le geste (iPad)
+  const key = [svc, s.line, svc==="oa" ? s.oa+"|"+s.dir : svc==="el" ? s.el+"|"+$("#elModel").value : s.pi].join("§");
+  const NAME = {oa:"OpenAI", el:"ElevenLabs", pi:"Piper"};
+  try{
+    let buf = cache.get(key);
+    if (!buf){
+      b.disabled = true; meta.textContent = "Génération…";
+      const t0 = performance.now();
+      const raw = svc==="oa" ? await ttsOpenAI(s) : svc==="el" ? await ttsEleven(s) : await ttsPiper(s);
+      buf = await ctx.decodeAudioData(raw.slice(0));
+      cache.set(key, buf);
+      const ms = Math.round(performance.now()-t0);
+      if (svc==="oa") spend.oa += buf.duration/60; else if (svc==="el") spend.el += s.line.length;
+      store.set("spend", spend); showSpend();
+      meta.innerHTML = `<span class="tag ${svc}">${NAME[svc]}</span> · délai ${ms} ms · ${buf.duration.toFixed(1)} s${svc==="pi" ? " · gratuit" : " · "+s.line.length+" car."}`;
+    } else {
+      meta.innerHTML = `<span class="tag ${svc}">${NAME[svc]}</span> · depuis le cache (gratuit)`;
+    }
+    play(buf, id, svc==="pi" ? +s.ton : 1);
+  } catch(err){
+    meta.innerHTML = `<span class="err">${err.message}</span>`;
+    log(err.message, true);
+  } finally { b.disabled = false; }
+});
+
+/* ---------- Clés ---------- */
+["kOA","kEL"].forEach(k => {
+  const el = $("#"+k); el.value = store.get(k, "");
+  el.addEventListener("change", () => store.set(k, el.value.trim()));
+});
+if (!store.get("kOA","") || !store.get("kEL","")) $("#keysBox").open = true;
+
+$("#tOA").onclick = async () => {
+  store.set("kOA", $("#kOA").value.trim());
+  try{
+    const r = await fetch("https://api.openai.com/v1/models/gpt-4o-mini-tts", { headers:{ "Authorization":"Bearer "+$("#kOA").value.trim() } });
+    log(r.ok ? "✔ Clé OpenAI valide." : "✘ OpenAI répond "+r.status+" : vérifiez la clé et le crédit du compte.", !r.ok);
+  }catch(err){ log("✘ OpenAI injoignable : "+err.message, true); }
+};
+$("#tEL").onclick = async () => {
+  store.set("kEL", $("#kEL").value.trim());
+  try{
+    const r = await fetch("https://api.elevenlabs.io/v1/voices", { headers:{ "xi-api-key": $("#kEL").value.trim() } });
+    if (!r.ok) throw new Error("ElevenLabs répond "+r.status+" : "+(await r.text()).slice(0,160));
+    const j = await r.json();
+    elVoices = (j.voices||[]).map(v => ({ id:v.voice_id, name:v.name, gender:(v.labels&&v.labels.gender)||"" }));
+    store.set("elVoices", elVoices);
+    assignElDefaults(); render();
+    log(`✔ ${elVoices.length} voix ElevenLabs chargées et réparties entre les personnages.`);
+  }catch(err){ log("✘ "+err.message, true); }
+};
+$("#forget").onclick = () => { ["kOA","kEL"].forEach(k => { $("#"+k).value=""; store.set(k,""); }); log("Clés effacées de cet appareil."); };
+$("#stop").onclick = stopAll;
+
+document.getElementById("ver").textContent = "banc v" + APP_VERSION + " (" + APP_DATE + ")";
+showSpend(); assignElDefaults(); assignPiDefaults(); render();
+if (piVoices.length) piStatus(`Piper : ${piVoices.length} voix françaises connues. Les voix déjà téléchargées marchent hors ligne.`);
+</script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MJ virtuel</title>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0c0c0a;--panel:#151512;--line:#2a2a24;--ink:#e8e4d4;--dim:#8c8774;--rec:#e0322b;--amber:#e8b04a}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:15px}
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(to bottom,rgba(255,255,255,.025) 0 1px,transparent 1px 3px)}
+  .wrap{max-width:640px;margin:0 auto;padding:28px 16px 60px}
+  .rec{color:var(--rec);font-family:"VT323",monospace;font-size:22px}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--rec);display:inline-block;margin-right:6px;box-shadow:0 0 8px var(--rec);animation:b 1.2s steps(2) infinite}
+  @keyframes b{50%{opacity:0}}
+  h1{font-family:"VT323",monospace;font-weight:400;font-size:56px;line-height:1;margin:10px 0 4px;letter-spacing:3px}
+  .sub{color:var(--dim);margin:0 0 26px}
+  a.big{display:block;border:1px solid var(--line);background:var(--panel);color:var(--ink);text-decoration:none;padding:16px 18px;margin:12px 0}
+  a.big:hover{border-color:var(--dim)}
+  a.big.main{border-color:var(--rec);background:rgba(224,50,43,.12)}
+  a.big b{font-family:"VT323",monospace;font-weight:400;font-size:30px;display:block}
+  a.big span{color:var(--dim);font-size:13px}
+  h2{font-size:13px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin:30px 0 8px}
+  ul{padding-left:18px;color:var(--dim);font-size:13px;line-height:1.6}
+  ul b{color:var(--ink)}
+  .note{color:var(--dim);font-size:12px;line-height:1.6}
+  .note a{color:var(--amber)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="rec"><span class="dot"></span>REC</div>
+  <h1>MJ VIRTUEL</h1>
+  <p class="sub">Un meneur de jeu de rôle qui parle : « la Voix ». Premier jeu : Channel Fear.</p>
+
+  <a class="big main" href="jouer.html"><b>▶ Jouer</b><span>L'app de jeu : avatar, voix des personnages, dictée, sauvegarde de la partie.</span></a>
+  <a class="big" href="banc.html"><b>♫ Banc d'essai des voix</b><span>Écouter et comparer les voix de chaque personnage (OpenAI, ElevenLabs, Piper).</span></a>
+
+  <h2>Versions en ligne</h2>
+  <ul>
+    <li><b>App de jeu v1.9</b> (01/11/2026)</li>
+    <li><b>Banc d'essai v1.3</b> (01/11/2026)</li>
+    <li><b>Serveur local du Mac v1.0</b> (pour VoiceStudio, voir le README)</li>
+  </ul>
+  <p class="note">Le numéro de version s'affiche aussi en haut de l'app de jeu. S'il ne correspond pas à celui ci-dessus, ferme l'onglet et rouvre-le : ton navigateur garde l'ancienne version en mémoire.<br>
+  Historique de toutes les mises à jour : <a href="https://github.com/fcourgnaud/mjvirtuel/commits/main">github.com/fcourgnaud/mjvirtuel/commits/main</a> · Détail des changements : <a href="https://github.com/fcourgnaud/mjvirtuel/blob/main/CHANGELOG.md">CHANGELOG</a></p>
+
+  <h2>Avant de jouer</h2>
+  <p class="note">Les documents du meneur (brief, fiche système, fiche scénario, méthode) ne sont pas sur ce site : le dépôt est public et le scénario vient d'un livre acheté. Charge-les dans l'app (⚙ › Documents) ou dans ton Projet Claude. Les clés et réglages restent sur ton appareil.</p>
+</div>
+</body>
+</html>

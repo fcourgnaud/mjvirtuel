@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>La Voix — MJ virtuel</title>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0c0c0a;--panel:#151512;--line:#2a2a24;--ink:#e8e4d4;--dim:#8c8774;--rec:#e0322b;--amber:#e8b04a;--mood:#e8e4d4}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:15px}
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:50;background:repeating-linear-gradient(to bottom,rgba(255,255,255,.025) 0 1px,transparent 1px 3px)}
+  .app{display:flex;flex-direction:column;height:100%;max-width:820px;margin:0 auto;padding:env(safe-area-inset-top) 12px env(safe-area-inset-bottom)}
+  /* moniteur */
+  .monitor{position:relative;border:1px solid var(--line);background:radial-gradient(ellipse at center,#1b1b16 0%,#0a0a08 75%);margin-top:10px;padding:12px 14px;min-height:150px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden}
+  .osd{display:flex;justify-content:space-between;font-family:"VT323",monospace;font-size:20px;color:var(--ink)}
+  .rec{color:var(--rec)} .dot{width:10px;height:10px;border-radius:50%;background:var(--rec);display:inline-block;margin-right:6px;box-shadow:0 0 8px var(--rec);animation:b 1.2s steps(2) infinite}
+  @keyframes b{50%{opacity:0}}
+  .face{display:flex;align-items:center;justify-content:center;gap:4px;height:64px}
+  .face i{display:block;width:6px;height:6px;background:var(--mood);opacity:.85;transition:height .08s,background .4s}
+  .who{font-family:"VT323",monospace;font-size:26px;text-align:center;letter-spacing:2px;color:var(--mood);transition:color .4s}
+  .mood{font-size:11px;color:var(--dim);text-align:center;text-transform:uppercase;letter-spacing:2px}
+  .jet{align-self:center;margin-top:8px;background:var(--amber);color:#111;font-family:"VT323",monospace;font-size:20px;padding:2px 10px;display:none;cursor:pointer}
+  /* journal */
+  .log{flex:1;overflow-y:auto;padding:12px 2px;display:flex;flex-direction:column;gap:10px}
+  .msg{padding:10px 12px;border:1px solid var(--line);background:var(--panel);line-height:1.5;white-space:pre-wrap}
+  .msg.me{align-self:flex-end;max-width:85%;border-color:#3a3a30;background:#1d1d18}
+  .msg.mj .tags{color:var(--dim);font-size:11px;margin-top:6px}
+  .msg details{margin-top:8px;font-size:12px;color:var(--dim)}
+  .msg.sys{color:var(--dim);font-size:12px;border-style:dashed}
+  .msg.err{color:var(--rec);border-color:var(--rec)}
+  /* saisie */
+  .input{display:flex;gap:6px;padding:8px 0 12px;align-items:flex-end}
+  textarea{flex:1;font:inherit;background:#0a0a08;color:var(--ink);border:1px solid var(--line);padding:10px;resize:none;min-height:46px;max-height:140px}
+  button{font:inherit;background:transparent;color:var(--ink);border:1px solid var(--line);padding:10px 12px;cursor:pointer}
+  button.main{border-color:var(--rec);background:rgba(224,50,43,.15)}
+  button.on{background:var(--rec);color:#fff}
+  button:disabled{opacity:.4}
+  .tools{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .tools button{padding:6px 10px;font-size:12px}
+  /* réglages */
+  .drawer{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:60;display:none;overflow-y:auto}
+  .drawer.open{display:block}
+  .sheet{max-width:640px;margin:20px auto;background:var(--panel);border:1px solid var(--line);padding:16px}
+  .sheet h2{font-family:"VT323",monospace;font-weight:400;font-size:30px;margin:0 0 6px}
+  .sheet h3{font-size:13px;color:var(--amber);margin:18px 0 6px;text-transform:uppercase;letter-spacing:1px}
+  .row{display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:center;margin:6px 0}
+  .row input,.row select{font:inherit;background:#0a0a08;color:var(--ink);border:1px solid var(--line);padding:8px;width:100%}
+  .note{font-size:12px;color:var(--dim);line-height:1.5}
+  .docs li{font-size:13px;margin:3px 0}
+  .ok{color:#9bd18b} .ko{color:var(--rec)}
+  .cast{display:grid;grid-template-columns:110px 1fr auto;gap:6px;align-items:center;margin:6px 0;font-size:13px}
+  .cast select{font:inherit;background:#0a0a08;color:var(--ink);border:1px solid var(--line);padding:7px;width:100%}
+  .cast button{padding:7px 10px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="monitor" id="monitor">
+    <div class="osd"><span class="rec"><span class="dot"></span>REC</span><span id="clock">00:00:00</span><span id="ver" style="color:var(--dim)"></span><button id="openSet" style="padding:2px 8px">⚙</button></div>
+    <div class="face" id="face"></div>
+    <div><div class="who" id="who">LA VOIX</div><div class="mood" id="mood">en attente</div></div>
+    <div class="jet" id="jet"></div>
+  </div>
+
+  <div class="tools">
+    <button id="start" class="main">▶ Lancer la partie</button>
+    <button id="stopAudio">■ Silence</button>
+    <button id="replay">↺ Réécouter</button>
+    <button id="journal">✎ Fin de partie</button>
+    <button id="newGame">✕ Nouvelle partie</button>
+  </div>
+
+  <div class="log" id="log"></div>
+
+  <div class="input">
+    <button id="mic" title="Parler">🎤</button>
+    <textarea id="txt" placeholder="Archie : je montre ma carte de presse…"></textarea>
+    <button id="send" class="main">➤</button>
+  </div>
+</div>
+
+<div class="drawer" id="drawer"><div class="sheet">
+  <h2>RÉGLAGES</h2>
+  <p class="note">Tout est gardé uniquement sur cet appareil : clés, documents et partie en cours. Rien n'est écrit dans le code de la page.</p>
+
+  <h3>1 · Documents du MJ</h3>
+  <ul class="docs" id="docList"></ul>
+  <input type="file" id="docFiles" accept=".md,.txt,text/markdown,text/plain" multiple>
+  <p class="note">Sélectionne les fichiers .md : brief de l'avatar, fiche système, fiche scénario (la méthode est facultative). Ils sont reconnus d'après leur nom.</p>
+
+  <h3>2 · Cerveau (Claude)</h3>
+  <div class="row"><label>Mode</label><select id="brain">
+    <option value="paste">Mon Projet Claude (copier-coller, gratuit)</option>
+    <option value="api">API Anthropic (automatique, payant)</option>
+  </select></div>
+  <p class="note">Mode copier-coller : tu joues dans ton Projet Claude (avec le brief, la fiche système et la fiche scénario), tu copies chaque réponse de la Voix et tu la colles ici. L'app la lit avec les voix des PNJ. Les documents et la clé Anthropic ci-dessous ne servent qu'au mode API.</p>
+  <div class="row"><label>Clé Anthropic</label><input type="password" id="kAN" placeholder="sk-ant-..."></div>
+  <div class="row"><label>Modèle</label><select id="model">
+    <option value="claude-sonnet-5-5">Sonnet 5.5 (recommandé)</option>
+    <option value="claude-opus-5-5">Opus 5.5 (le meilleur, plus cher)</option>
+    <option value="claude-haiku-5-5">Haiku 5.5 (rapide, économique)</option>
+  </select></div>
+  <p class="note">Clé à créer sur console.anthropic.com › API Keys (avec un peu de crédit). Fixe une limite de dépense.</p>
+
+  <h3>3 · Voix</h3>
+  <div class="row"><label>Moteur</label><select id="engine">
+    <option value="pi">Piper (gratuit, hors ligne)</option>
+    <option value="oa">OpenAI</option>
+    <option value="el">ElevenLabs</option>
+    <option value="vs">VoiceStudio (sur ton Mac, gratuit)</option>
+    <option value="off">Muet (texte seul)</option>
+  </select></div>
+  <div class="row"><label>Effet</label><select id="fx">
+    <option value="none">Aucun</option><option value="vhs" selected>Bande VHS</option><option value="phone">Téléphone</option><option value="tape">Magnétophone usé</option>
+  </select></div>
+  <div class="row"><label>Clé OpenAI</label><input type="password" id="kOA" placeholder="sk-..."></div>
+  <div class="row"><label>Clé ElevenLabs</label><input type="password" id="kEL" placeholder="sk_..."></div>
+  <div class="row"><label>Modèle Eleven</label><select id="elModel">
+    <option value="eleven_flash_v2_5">Flash v2.5 (rapide)</option><option value="eleven_multilingual_v2">Multilingual v2</option><option value="eleven_v3">v3</option>
+  </select></div>
+  <h3>Casting ElevenLabs</h3>
+  <div class="tools" style="margin-top:0"><button id="elLoad">⟳ Charger mes voix ElevenLabs</button></div>
+  <div id="elCast"></div>
+  <p class="note">Choisis une voix par personnage et touche ▶ pour l'écouter (avec l'effet choisi). Le choix est gardé sur cet appareil et partagé avec le <a href="banc.html" style="color:var(--amber)">banc d'essai</a>. Pour ajouter des voix à la liste, ajoute-les à ta bibliothèque sur elevenlabs.io (Voice Library ou Voice Design), puis touche ⟳. Pour Piper, installe les voix une fois depuis le banc d'essai.</p>
+
+  <h3>VoiceStudio</h3>
+  <div class="row"><label>Adresse</label><input type="text" id="vsUrl" placeholder="automatique (laisser vide)" autocapitalize="off" autocorrect="off"></div>
+  <div class="row"><label>Code PIN</label><input type="text" id="vsPin" placeholder="vide si l'app tourne sur ce Mac" inputmode="numeric"></div>
+  <div class="row"><label>Consignes</label><select id="vsInstruct"><option value="0">Ne pas envoyer</option><option value="1">Envoyer la consigne de jeu du PNJ (instruct)</option></select></div>
+  <div class="tools" style="margin-top:0"><button id="vsLoad">⟳ Charger mes voix VoiceStudio</button></div>
+  <div id="vsCast"></div>
+  <p class="note">Le plus simple : ouvre cette app via le serveur local du Mac (serveur-mj.py), sur le Mac ou sur le téléphone, et laisse l'adresse et le PIN vides. Tout passe alors par le Mac, sans blocage.</p>
+
+  <h3>4 · Saisie vocale</h3>
+  <div class="row"><label>Lecture auto</label><select id="autoSend"><option value="0">Je relis avant d'envoyer</option><option value="1">Envoyer dès que je m'arrête de parler</option></select></div>
+
+  <h3>Version</h3>
+  <p class="note" id="verNote"></p>
+  <ul class="note" id="changelog" style="padding-left:18px;margin:4px 0"></ul>
+
+  <div class="tools"><button id="closeSet" class="main">Fermer</button><button id="forget">Effacer les clés</button></div>
+</div></div>
+
+<script>
+/* ---------------- version ---------------- */
+const APP_VERSION = "1.9";
+const APP_DATE = "01/11/2026";
+const CHANGELOG = [
+  ["1.9", "VoiceStudio : voix standard par défaut si aucune voix n'est choisie, voix personnelles en plus"],
+  ["1.8", "VoiceStudio via le serveur local du Mac (serveur-mj.py) : marche sur le Mac et sur le téléphone"],
+  ["1.7", "Nouveau moteur de voix : VoiceStudio (gratuit, sur ton Mac), avec casting par personnage"],
+  ["1.6", "Messages d'erreur ElevenLabs et OpenAI expliqués, un seul message en cas de clé refusée"],
+  ["1.5", "Lecture audio fiable sur iPhone (mode silencieux, retour depuis une autre app), répliques demandées une par une"],
+  ["1.4", "Choix des voix ElevenLabs par personnage dans les réglages"],
+  ["1.3", "Accepte les réponses copiées depuis un bloc de code"],
+  ["1.2", "Mode copier-coller gratuit (Projet Claude)"],
+  ["1.1", "Mode API moins cher (cache de l'historique)"],
+  ["1.0", "Première version : avatar, voix, dictée, sauvegarde de la partie"]
+];
+
+/* ---------------- stockage ---------------- */
+const $ = s => document.querySelector(s);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem("mjv_"+k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem("mjv_"+k, JSON.stringify(v)); }catch(e){ sys("Stockage plein ou indisponible : la partie ne sera pas sauvegardée.", true); } }
+};
+
+/* ---------------- casting (partagé avec le banc d'essai) ---------------- */
+const CAST = {
+  narrateur:{g:"male", oa:"onyx", ton:.92, dir:"Voix off de documentaire paranormal. Grave, posée, lente, avec des silences. Sobre et inquiétante."},
+  gorge_profonde:{g:"male", oa:"echo", ton:1.12, dir:"Jeune homme très nerveux, débit rapide, petits rires gênés."},
+  jerry:{g:"male", oa:"verse", ton:.88, dir:"Homme mûr bourru, voix éraillée, ensommeillé."},
+  sansom:{g:"male", oa:"fable", ton:1.05, dir:"Homme maniéré et bavard, ton mielleux et complice."},
+  samantha:{g:"female", oa:"coral", ton:1.04, dir:"Femme autoritaire et cassante, puis enjouée façon publicité."},
+  leslie:{g:"female", oa:"shimmer", ton:1.0, dir:"Jeune femme terrifiée et confuse, voix tremblante."},
+  gassama:{g:"male", oa:"ballad", ton:.95, dir:"Homme chaleureux, rire franc, voix ample."},
+  jacob:{g:"male", oa:"ash", ton:.82, dir:"Homme rural, très peu de mots, voix basse, froide et menaçante."},
+  lynn:{g:"female", oa:"sage", ton:.93, dir:"Femme polie et douce, absente, en deuil, inquiétante."}
+};
+function voiceCfg(id){
+  const cast = store.get("cast", {});
+  const base = CAST[id] || CAST.narrateur;
+  const s = Object.assign({oa:base.oa, ton:base.ton, dir:base.dir, el:"", pi:"", vs:""}, cast[id] || cast.narrateur || {});
+  if (!CAST[id] && cast.narrateur) Object.assign(s, cast.narrateur);
+  if (!s.pi){
+    const piv = store.get("piVoices", []);
+    const find = p => (piv.find(v => v.key.includes(p)) || {}).key;
+    s.pi = base.g === "female" ? (find("siwis-medium") || find("siwis") || "fr_FR-siwis-medium") : (find("tom-medium") || find("gilles") || "fr_FR-tom-medium");
+  }
+  return s;
+}
+
+/* ---------------- casting ElevenLabs ---------------- */
+const CAST_NAMES = {narrateur:"La Voix", gorge_profonde:"Gorge Profonde", jerry:"Jerry", sansom:"Sansom", samantha:"Samantha", leslie:"Leslie", gassama:"Gassama", jacob:"Jacob", lynn:"Lynn"};
+const CAST_LINES = {
+  narrateur:"Bande numéro douze. Silent Peaks, Nevada. Vingt-deux heures trente.",
+  gorge_profonde:"Vous êtes en retard ! Non, non, pas mon visage, on avait dit flouté !",
+  jerry:"Les flics sont déjà passés. Je leur ai pas dit grand-chose.",
+  sansom:"Jason ? Un amour, vraiment. Mais la vidéo, ça a un prix, mes chéris.",
+  samantha:"Oh, une caméra ? Bienvenue au StarClub Café, où chaque matin est une étoile !",
+  leslie:"Il est entré ce matin… je me suis cachée… je ne sais plus quel jour on est.",
+  gassama:"Entrez, entrez, mes amis ! Mais d'abord, laissez-moi vous protéger.",
+  jacob:"Partez. Ce qui appartient aux Callahan reste aux Callahan.",
+  lynn:"Un peu de café ? Mon mari est à l'étable. Il ne parle plus beaucoup."
+};
+function setCast(id, k, v){ const cast = store.get("cast", {}); cast[id] = Object.assign(cast[id] || {}, {[k]: v}); store.set("cast", cast); }
+function assignElDefaults(){
+  const els = store.get("elVoices", []); if (!els.length) return;
+  const cast = store.get("cast", {}), used = new Set();
+  Object.keys(CAST).forEach(id => {
+    const cur = cast[id] && cast[id].el;
+    if (cur && els.some(v => v.id === cur)){ used.add(cur); return; }
+    const same = els.filter(v => v.gender === CAST[id].g);
+    const fresh = same.filter(v => !used.has(v.id));
+    const n = Object.keys(CAST).filter(k => CAST[k].g === CAST[id].g).indexOf(id);
+    const pick = fresh[0] || (same.length ? same[n % same.length] : (els.find(v => !used.has(v.id)) || els[n % els.length]));
+    setCast(id, "el", pick.id); used.add(pick.id);
+  });
+}
+function renderElCast(){
+  const els = store.get("elVoices", []);
+  if (!els.length){ $("#elCast").innerHTML = '<p class="note">Aucune voix chargée. Colle ta clé ElevenLabs plus haut, puis touche ⟳.</p>'; return; }
+  $("#elCast").innerHTML = Object.keys(CAST).map(id => {
+    const cur = voiceCfg(id).el;
+    const opts = els.map(v => `<option value="${v.id}" ${v.id===cur?"selected":""}>${esc(v.name)}${v.gender ? (v.gender==="male"?" ♂":v.gender==="female"?" ♀":"") : ""}</option>`).join("");
+    return `<div class="cast"><span>${CAST_NAMES[id]}</span><select data-elcast="${id}">${opts}</select><button data-eltest="${id}">▶</button></div>`;
+  }).join("");
+}
+document.addEventListener("change", e => { const id = e.target.dataset && e.target.dataset.elcast; if (id) setCast(id, "el", e.target.value); });
+document.addEventListener("click", async e => {
+  const id = e.target.dataset && e.target.dataset.eltest; if (!id) return;
+  ensureCtx(); stopAudio();
+  const b = e.target; b.disabled = true; b.textContent = "…";
+  try{ const res = await synth("el", id, CAST_LINES[id]); await playBuffer(res.buf, res.rate); }
+  catch(err){ sys("Test de voix : " + err.message, true); }
+  finally{ b.disabled = false; b.textContent = "▶"; }
+});
+
+/* ---------------- VoiceStudio ---------------- */
+// servie par le serveur local du Mac : on passe par lui (même adresse) ; sinon VoiceStudio direct
+function vsDefault(){ return location.protocol === "http:" ? location.origin : "http://localhost:3900"; }
+function vsBase(){ return ($("#vsUrl").value.trim() || vsDefault()).replace(/\/+$/, ""); }
+function vsHeaders(json){ const h = {}; if (json) h["Content-Type"] = "application/json"; const pin = $("#vsPin").value.trim(); if (pin) h["X-OmniVoice-Pin"] = pin; return h; }
+function vsNetErr(base){
+  if (location.protocol === "http:") return "Serveur local injoignable à " + base + " : vérifie que la fenêtre Terminal du serveur (serveur-mj.py) est toujours ouverte et que le téléphone est sur le même wifi que le Mac.";
+  const httpsPage = location.protocol === "https:";
+  return "VoiceStudio injoignable à " + base + ". Vérifie que l'app VoiceStudio est ouverte"
+    + (httpsPage && !/localhost|127\.0\.0\.1/.test(base) ? ". Attention : cette page est en https et ne peut pas appeler une adresse locale en http depuis un autre appareil (voir les explications de Claude)." : "")
+    + (httpsPage ? ". Solution recommandée : ouvre l'app via le serveur local du Mac (serveur-mj.py) plutôt que via GitHub." : ".");
+}
+function assignVsDefaults(){
+  const vs = store.get("vsVoices", []); if (!vs.length) return;
+  const cast = store.get("cast", {});
+  const mine = vs.filter(v => !/voix standard/.test(v.name));
+  Object.keys(CAST).forEach((id, n) => {
+    const cur = cast[id] && cast[id].vs; if (cur && vs.some(v => v.id === cur)) return;
+    setCast(id, "vs", mine.length ? mine[n % mine.length].id : (CAST[id].oa || "alloy"));
+  });
+}
+function renderVsCast(){
+  const vs = store.get("vsVoices", []);
+  if (!vs.length){ $("#vsCast").innerHTML = '<p class="note">Aucune voix VoiceStudio chargée.</p>'; return; }
+  $("#vsCast").innerHTML = Object.keys(CAST).map(id => {
+    const cur = voiceCfg(id).vs;
+    const opts = vs.map(v => `<option value="${esc(v.id)}" ${v.id===cur?"selected":""}>${esc(v.name)}</option>`).join("");
+    return `<div class="cast"><span>${CAST_NAMES[id]}</span><select data-vscast="${id}">${opts}</select><button data-vstest="${id}">▶</button></div>`;
+  }).join("");
+}
+document.addEventListener("change", e => { const id = e.target.dataset && e.target.dataset.vscast; if (id) setCast(id, "vs", e.target.value); });
+document.addEventListener("click", async e => {
+  const id = e.target.dataset && e.target.dataset.vstest; if (!id) return;
+  ensureCtx(); stopAudio();
+  const b = e.target; b.disabled = true; b.textContent = "…";
+  try{ const res = await synth("vs", id, CAST_LINES[id]); await playBuffer(res.buf, res.rate); }
+  catch(err){ sys("Test de voix : " + err.message, true); }
+  finally{ b.disabled = false; b.textContent = "▶"; }
+});
+
+/* ---------------- documents ---------------- */
+let docs = store.get("docs", {});
+const DOC_TYPES = [
+  {k:"brief", label:"Brief de l'avatar", test:n=>/brief|avatar/.test(n)},
+  {k:"systeme", label:"Fiche système", test:n=>/syst/.test(n)},
+  {k:"scenario", label:"Fiche scénario", test:n=>/scen|fiche-mj|gothic|episode|s0\de0/.test(n)},
+  {k:"methode", label:"Méthode (facultatif)", test:n=>/method/.test(n)}
+];
+function renderDocs(){
+  $("#docList").innerHTML = DOC_TYPES.map(t => {
+    const d = docs[t.k];
+    return `<li class="${d ? "ok" : (t.k==="methode" ? "" : "ko")}">${d ? "✔" : "✘"} ${t.label}${d ? ` — ${d.name} (${Math.round(d.text.length/1000)} k car.)` : ""}</li>`;
+  }).join("");
+}
+$("#docFiles").onchange = async e => {
+  for (const f of e.target.files){
+    const n = f.name.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+    const t = DOC_TYPES.find(t => t.test(n));
+    if (!t){ sys(`Fichier non reconnu : ${f.name}. Renomme-le avec « brief », « systeme », « scenario » ou « methode ».`, true); continue; }
+    docs[t.k] = { name: f.name, text: await f.text() };
+  }
+  store.set("docs", docs); renderDocs();
+};
+function docsReady(){ return docs.brief && docs.systeme && docs.scenario; }
+
+const APP_RULES = `
+# Contraintes de l'application vocale
+- Ta réponse est **lue à voix haute** par une synthèse vocale. Écris uniquement ce qui doit être dit, plus les balises. Pas de Markdown (pas de **, de #, de listes, de tableaux).
+- Chaque changement de locuteur commence par une balise [voix:x] (narrateur ou identifiant de PNJ de la section Ressources de la Fiche scénario). Sans balise, c'est le narrateur.
+- Termine **chaque** réponse par ton bloc d'état, entre [ÉTAT] et [/ÉTAT]. Il est masqué aux joueurs et n'est pas lu.
+- Les joueurs écrivent ou dictent leurs messages ; la dictée peut contenir des fautes : interprète avec bienveillance.
+- Reste court : 3 à 5 phrases par prise de parole, sauf temps forts.`;
+
+function systemPrompt(){
+  let s = docs.brief.text + "\n\n" + APP_RULES + "\n\n# DOCUMENTS DE RÉFÉRENCE\n\n## Fiche système\n" + docs.systeme.text + "\n\n## Fiche scénario\n" + docs.scenario.text;
+  if (docs.methode) s += "\n\n## Méthode\n" + docs.methode.text;
+  return s;
+}
+
+/* ---------------- partie ---------------- */
+let history = store.get("history", []);
+let usage = store.get("usage", {in:0, out:0, cached:0});
+let busy = false;
+
+function addMsg(role, html, cls){
+  const d = document.createElement("div");
+  d.className = "msg " + (cls || role);
+  d.innerHTML = html;
+  $("#log").appendChild(d); $("#log").scrollTop = 1e9;
+  return d;
+}
+function sys(t, err){ addMsg("sys", esc(t), err ? "err" : "sys"); }
+function esc(t){ return t.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+
+function parseMJ(text){
+  text = text.replace(/```[a-zA-Z]*\s*\n?/g, "");
+  const etat = (text.match(/\[ÉTAT\]([\s\S]*?)(\[\/ÉTAT\]|$)/i) || [])[1] || "";
+  let body = text.replace(/\[ÉTAT\][\s\S]*?(\[\/ÉTAT\]|$)/gi, "");
+  const segments = []; let voice = "narrateur", buf = "";
+  const tags = [];
+  const re = /\[(\w+):([^\]]+)\]/g; let last = 0, m;
+  const push = () => { const t = clean(buf); if (t) segments.push({voice, text:t}); buf = ""; };
+  while ((m = re.exec(body))){
+    buf += body.slice(last, m.index); last = re.lastIndex;
+    const [_, k, v] = m; tags.push({k, v, at: segments.length});
+    if (k === "voix"){ push(); voice = v.trim(); }
+    else if (k === "humeur" || k === "jet" || k === "musique" || k === "son" || k === "image" || k === "parole"){ push(); segments.push({tag:k, value:v.trim()}); }
+  }
+  buf += body.slice(last); push();
+  return {etat: etat.trim(), segments, display: clean(body.replace(re, ""), true)};
+}
+function clean(t, keepLines){
+  t = t.replace(/\*\*|__|`|^#+\s*|^>\s*/gm, "").replace(/[ \t]+/g, " ");
+  return keepLines ? t.replace(/^ +| +$/gm, "").replace(/\n{3,}/g, "\n\n").trim() : t.replace(/\s*\n+\s*/g, " ").trim();
+}
+
+async function callClaude(){
+  const key = $("#kAN").value.trim();
+  if (!key) throw new Error("Clé Anthropic manquante (⚙ › Cerveau).");
+  const r = await fetch("https://api.anthropic.com/v1/messages", {
+    method:"POST",
+    headers:{ "x-api-key":key, "anthropic-version":"2023-06-01", "content-type":"application/json", "anthropic-dangerous-direct-browser-access":"true" },
+    body: JSON.stringify({
+      model: $("#model").value, max_tokens: 1500,
+      system: [{ type:"text", text: systemPrompt(), cache_control:{type:"ephemeral"} }],
+      // cache aussi l'historique : chaque tour relit la partie au tarif « cache » (10 x moins cher)
+      messages: history.map((m, i) => i === history.length - 1
+        ? {role:m.role, content:[{type:"text", text:m.content, cache_control:{type:"ephemeral"}}]}
+        : {role:m.role, content:m.content})
+    })
+  });
+  if (!r.ok) throw new Error("Claude "+r.status+" : "+(await r.text()).slice(0,240));
+  const j = await r.json();
+  if (j.usage){ usage.in += (j.usage.input_tokens||0); usage.out += (j.usage.output_tokens||0); usage.cached += (j.usage.cache_read_input_tokens||0); store.set("usage", usage); }
+  return (j.content || []).filter(c => c.type === "text").map(c => c.text).join("\n");
+}
+
+function pasteMode(){ return $("#brain").value === "paste"; }
+function updateMode(){
+  const p = pasteMode();
+  $("#txt").placeholder = p ? "Colle ici la réponse de la Voix…" : "Archie : je montre ma carte de presse…";
+  $("#start").textContent = p ? "📋 Coller et lire" : "▶ Lancer la partie";
+  $("#mic").style.display = p ? "none" : "";
+}
+async function readPasted(text){
+  ensureCtx();
+  if (!text){
+    try{ text = (await navigator.clipboard.readText()).trim(); }catch(e){}
+    if (!text){ sys("Copie la réponse de la Voix dans ton Projet Claude, puis colle-la dans le champ du bas et touche ➤."); return; }
+  }
+  history.push({role:"assistant", content:text}); store.set("history", history);
+  renderMJ(text, true);
+}
+async function turn(userText){
+  if (busy) return;
+  if (pasteMode()){ readPasted(userText); return; }
+  if (!docsReady()){ openSet(); sys("Il manque des documents du MJ (⚙ › Documents)."); return; }
+  ensureCtx();
+  busy = true; $("#send").disabled = true;
+  history.push({role:"user", content:userText});
+  addMsg("me", esc(userText));
+  setMood("réfléchit…"); thinking(true);
+  try{
+    const text = await callClaude();
+    history.push({role:"assistant", content:text});
+    store.set("history", history);
+    renderMJ(text, true);
+  } catch(err){
+    history.pop(); store.set("history", history);
+    sys(err.message, true); setMood("erreur");
+  } finally { busy = false; $("#send").disabled = false; thinking(false); }
+}
+
+let lastParsed = null;
+function renderMJ(text, speakIt){
+  const p = parseMJ(text); lastParsed = p;
+  const tags = p.segments.filter(s => s.tag).map(s => `[${s.tag}:${s.value}]`).join(" ");
+  addMsg("mj", esc(p.display) + (tags ? `<div class="tags">${esc(tags)}</div>` : "") + (p.etat ? `<details><summary>État de partie</summary>${esc(p.etat)}</details>` : ""));
+  if (speakIt) speak(p.segments);
+}
+
+/* ---------------- avatar ---------------- */
+const MOODS = {neutre:"#e8e4d4", grave:"#b9c2c9", inquiet:"#e8b04a", amuse:"#9bd18b", menacant:"#e0322b", effraye:"#c6a4ff"};
+const bars = []; for (let i=0;i<28;i++){ const b=document.createElement("i"); $("#face").appendChild(b); bars.push(b); }
+let analyser = null, thinkTimer = null;
+function setMood(m){ $("#mood").textContent = m; }
+function setHumeur(h){ const c = MOODS[h] || MOODS.neutre; document.documentElement.style.setProperty("--mood", c); setMood(h); }
+function setWho(v){ $("#who").textContent = v === "narrateur" ? "LA VOIX" : v.replace(/_/g," ").toUpperCase(); }
+function thinking(on){
+  clearInterval(thinkTimer);
+  if (on){ let t=0; thinkTimer = setInterval(() => { t++; bars.forEach((b,i) => b.style.height = (6 + 10*Math.max(0,Math.sin(t/3 - i/3))) + "px"); }, 60); }
+  else bars.forEach(b => b.style.height = "6px");
+}
+(function anim(){
+  if (analyser){
+    const d = new Uint8Array(analyser.frequencyBinCount); analyser.getByteFrequencyData(d);
+    bars.forEach((b,i) => { const v = d[Math.floor(i * d.length / bars.length / 2)] / 255; b.style.height = (6 + v*58) + "px"; });
+  }
+  requestAnimationFrame(anim);
+})();
+
+/* ---------------- audio ---------------- */
+let ctx = null, current = [], playToken = 0;
+function ensureCtx(){
+  if (!ctx){ ctx = new (window.AudioContext || window.webkitAudioContext)(); analyser = ctx.createAnalyser(); analyser.fftSize = 128; analyser.connect(ctx.destination); }
+  // iPhone : jouer même en mode silencieux, et réveiller l'audio après un passage dans une autre app
+  try{ if (navigator.audioSession) navigator.audioSession.type = "playback"; }catch(e){}
+  if (ctx.state !== "running"){ try{ ctx.resume(); }catch(e){} }
+  try{ const b = ctx.createBuffer(1, 1, 22050), s = ctx.createBufferSource(); s.buffer = b; s.connect(ctx.destination); s.start(0); }catch(e){}
+}
+function curve(a){ const n=2048,c=new Float32Array(n); for(let i=0;i<n;i++){const x=i*2/n-1;c[i]=((1+a)*x)/(1+a*Math.abs(x));} return c; }
+function stopAudio(){ playToken++; current.forEach(n => { try{ n.stop(); }catch(e){} }); current = []; }
+function playBuffer(buffer, rate){
+  return new Promise(resolve => {
+    const fx = $("#fx").value, src = ctx.createBufferSource(); src.buffer = buffer; src.playbackRate.value = rate || 1;
+    const out = ctx.createGain(); out.connect(analyser);
+    const nodes = [src];
+    if (fx === "none") src.connect(out);
+    else {
+      const hp = ctx.createBiquadFilter(); hp.type="highpass"; const lp = ctx.createBiquadFilter(); lp.type="lowpass"; const sh = ctx.createWaveShaper();
+      let hiss=.012, drive=5;
+      if (fx==="vhs"){ hp.frequency.value=180; lp.frequency.value=5200; }
+      if (fx==="phone"){ hp.frequency.value=400; lp.frequency.value=3200; drive=18; hiss=.005; }
+      if (fx==="tape"){ hp.frequency.value=140; lp.frequency.value=3800; drive=8; hiss=.025; }
+      sh.curve = curve(drive); src.connect(hp).connect(lp).connect(sh).connect(out);
+      const nb = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate), d = nb.getChannelData(0); for (let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+      const n = ctx.createBufferSource(); n.buffer = nb; n.loop = true; const ng = ctx.createGain(); ng.gain.value = hiss; n.connect(ng).connect(out); n.start(); nodes.push(n);
+    }
+    src.onended = () => { nodes.forEach(x => { try{ x.stop(); }catch(e){} }); current = current.filter(x => !nodes.includes(x)); resolve(); };
+    current.push(...nodes); src.start();
+  });
+}
+
+/* moteurs */
+let piper = null;
+async function loadPiper(){
+  if (piper) return piper;
+  for (const url of ["https://cdn.jsdelivr.net/npm/@mintplex-labs/piper-tts-web@1.0.4/+esm","https://esm.sh/@mintplex-labs/piper-tts-web@1.0.4"]){
+    try{ piper = await import(url); return piper; }catch(e){}
+  }
+  throw new Error("Impossible de charger Piper.");
+}
+async function synth(engine, voiceId, text){
+  const v = voiceCfg(voiceId);
+  if (engine === "pi"){
+    const tts = await loadPiper();
+    const wav = await tts.predict({text, voiceId: v.pi});
+    return {buf: await ctx.decodeAudioData(await wav.arrayBuffer()), rate: +v.ton || 1};
+  }
+  if (engine === "oa"){
+    const key = $("#kOA").value.trim(); if (!key) throw new Error("Clé OpenAI manquante.");
+    const r = await fetch("https://api.openai.com/v1/audio/speech", {method:"POST", headers:{Authorization:"Bearer "+key, "Content-Type":"application/json"},
+      body: JSON.stringify({model:"gpt-4o-mini-tts", voice:v.oa, input:text, instructions:"Parle en français de France, sans accent étranger. "+v.dir, response_format:"mp3"})});
+    if (!r.ok) throw new Error("OpenAI " + r.status + (r.status === 401 ? " → clé OpenAI refusée, vérifie-la dans ⚙." : ""));
+    return {buf: await ctx.decodeAudioData(await r.arrayBuffer()), rate:1};
+  }
+  if (engine === "vs"){
+    const base = vsBase();
+    // sans voix choisie : voix standard compatible OpenAI (onyx, echo…), acceptée par VoiceStudio
+    const body = {model:"tts-1", voice: v.vs || v.oa || "alloy", input:text, response_format:"wav"};
+    if ($("#vsInstruct").value === "1") body.instruct = v.dir;
+    let r;
+    try{ r = await fetch(base + "/v1/audio/speech", {method:"POST", headers: vsHeaders(true), body: JSON.stringify(body)}); }
+    catch(e){ throw new Error(vsNetErr(base)); }
+    if (!r.ok){ let d = ""; try{ d = (await r.json()).detail || ""; }catch(e){}
+      throw new Error("VoiceStudio " + r.status + (d ? " (" + (typeof d === "string" ? d : JSON.stringify(d)) + ")" : "") + (r.status === 401 ? " → PIN manquant ou faux : recopie celui affiché par VoiceStudio." : "")); }
+    return {buf: await ctx.decodeAudioData(await r.arrayBuffer()), rate:1};
+  }
+  if (engine === "el"){
+    const key = $("#kEL").value.trim(); if (!key) throw new Error("Clé ElevenLabs manquante.");
+    if (!v.el) throw new Error("Pas de voix ElevenLabs pour « "+voiceId+" » : règle le casting dans le banc d'essai.");
+    const model = $("#elModel").value, body = {text, model_id:model, voice_settings:{stability:.5, similarity_boost:.75, style:.35}};
+    if (model === "eleven_flash_v2_5") body.language_code = "fr";
+    const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(v.el)}?output_format=mp3_44100_128`, {method:"POST", headers:{"xi-api-key":key,"Content-Type":"application/json"}, body:JSON.stringify(body)});
+    if (!r.ok){
+      let detail = ""; try{ const j = await r.json(); detail = (j.detail && (j.detail.message || j.detail.status || JSON.stringify(j.detail))) || ""; }catch(e){}
+      const hint = r.status === 401 ? " → clé refusée : elle est fausse, supprimée, ou n'a pas la permission « Text to Speech ». Recrée-la sur elevenlabs.io (Developers › API Keys) et colle-la dans ⚙."
+                 : r.status === 402 || /quota|credit/i.test(detail) ? " → crédits ElevenLabs épuisés pour ce mois."
+                 : r.status === 429 ? " → trop de demandes à la fois, réessaie dans un instant." : "";
+      throw new Error("ElevenLabs " + r.status + (detail ? " (" + detail + ")" : "") + hint);
+    }
+    return {buf: await ctx.decodeAudioData(await r.arrayBuffer()), rate:1};
+  }
+}
+async function speak(segments){
+  stopAudio(); const token = playToken;
+  const engine = $("#engine").value;
+  // lance toutes les synthèses en parallèle, joue dans l'ordre
+  // synthèse en file : on prépare la réplique suivante pendant que la courante est lue
+  // (les offres gratuites refusent trop de requêtes simultanées)
+  const jobs = new Array(segments.length).fill(null);
+  const job = i => {
+    if (i >= segments.length || jobs[i] || !segments[i].text || engine === "off") return jobs[i];
+    const s = segments[i];
+    jobs[i] = synth(engine, s.voice, s.text)
+      .catch(async e => { if (/429/.test(e.message)){ await new Promise(r => setTimeout(r, 1500)); return synth(engine, s.voice, s.text); } throw e; })
+      .catch(e => ({err:e}));
+    return jobs[i];
+  };
+  const nextText = from => { for (let k = from; k < segments.length; k++) if (segments[k].text) return k; return -1; };
+  job(nextText(0));
+  for (let i=0; i<segments.length; i++){
+    if (token !== playToken) return;
+    const s = segments[i];
+    if (s.tag === "humeur") setHumeur(s.value.toLowerCase());
+    else if (s.tag === "jet"){ const [who, test] = s.value.split(":"); $("#jet").textContent = `🎲 ${who} · ${test || ""}`; $("#jet").style.display = "block"; }
+    else if (s.tag === "parole"){ setMood("à vous"); }
+    else if (s.text){
+      setWho(s.voice);
+      const res = await job(i);
+      const nx = nextText(i + 1); if (nx >= 0) job(nx);
+      if (!res) continue;
+      if (res.err){ sys("Voix : " + res.err.message, true); if (/ 40[12]/.test(res.err.message)) return; continue; }
+      if (token !== playToken) return;
+      if (ctx.state !== "running"){ try{ await ctx.resume(); }catch(e){} }
+      if (ctx.state !== "running"){ sys("Le son est bloqué par le téléphone : touche « ↺ Réécouter ».", true); return; }
+      await playBuffer(res.buf, res.rate);
+    }
+  }
+  if (token === playToken){ setWho("narrateur"); setMood("à vous"); }
+}
+
+/* ---------------- dictée ---------------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, listening = false;
+$("#mic").onclick = () => {
+  ensureCtx();
+  if (!SR){ sys("La dictée n'est pas disponible dans ce navigateur. Utilise le micro du clavier."); return; }
+  if (listening){ rec && rec.stop(); return; }
+  stopAudio();
+  rec = new SR(); rec.lang = "fr-FR"; rec.interimResults = true; rec.continuous = false;
+  const before = $("#txt").value ? $("#txt").value + " " : "";
+  rec.onresult = e => { let t = ""; for (const r of e.results) t += r[0].transcript; $("#txt").value = before + t; };
+  rec.onend = () => { listening = false; $("#mic").classList.remove("on"); if ($("#autoSend").value === "1" && $("#txt").value.trim()) $("#send").click(); };
+  rec.onerror = e => sys("Dictée : " + e.error, true);
+  rec.start(); listening = true; $("#mic").classList.add("on");
+};
+
+/* ---------------- boutons ---------------- */
+$("#send").onclick = () => { const t = $("#txt").value.trim(); if (!t) return; $("#txt").value = ""; turn(t); };
+$("#txt").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); $("#send").click(); } });
+$("#start").onclick = () => {
+  if (pasteMode()){ readPasted(""); return; }
+  if (history.length){ sys("Une partie est déjà en cours. « ✕ Nouvelle partie » pour recommencer."); return; }
+  turn("Lance la partie.");
+};
+$("#stopAudio").onclick = () => { stopAudio(); setMood("silence"); };
+$("#replay").onclick = () => { ensureCtx(); if (lastParsed) speak(lastParsed.segments); };
+$("#journal").onclick = () => pasteMode() ? sys("En mode copier-coller, demande le journal directement dans ton Projet Claude : « Fin de session. Remplis le journal de partie. »") : turn("Fin de session. Remplis le journal de partie (Méthode, Partie F), sans balises de voix, en texte simple.");
+let confirmNew = false;
+$("#newGame").onclick = () => {
+  if (!confirmNew){ confirmNew = true; $("#newGame").textContent = "✕ Confirmer ?"; setTimeout(() => { confirmNew = false; $("#newGame").textContent = "✕ Nouvelle partie"; }, 3000); return; }
+  stopAudio(); history = []; store.set("history", history); $("#log").innerHTML = ""; lastParsed = null; $("#jet").style.display = "none";
+  confirmNew = false; $("#newGame").textContent = "✕ Nouvelle partie"; sys("Nouvelle partie prête. Touche « ▶ Lancer la partie ».");
+};
+$("#jet").onclick = () => $("#jet").style.display = "none";
+
+/* réglages */
+function openSet(){ $("#drawer").classList.add("open"); }
+$("#openSet").onclick = openSet;
+$("#closeSet").onclick = () => $("#drawer").classList.remove("open");
+["kAN","kOA","kEL","model","engine","fx","elModel","autoSend","brain","vsUrl","vsPin","vsInstruct"].forEach(k => {
+  const el = $("#"+k); const v = store.get(k, null); if (v !== null) el.value = v;
+  el.addEventListener("change", () => { store.set(k, el.value.trim()); if (k === "brain") updateMode(); });
+});
+updateMode();
+$("#elLoad").onclick = async () => {
+  const key = $("#kEL").value.trim(); store.set("kEL", key);
+  if (!key){ sys("Colle d'abord ta clé ElevenLabs.", true); return; }
+  $("#elLoad").disabled = true; $("#elLoad").textContent = "Chargement…";
+  try{
+    const r = await fetch("https://api.elevenlabs.io/v1/voices", { headers:{ "xi-api-key": key } });
+    if (!r.ok) throw new Error("ElevenLabs répond " + r.status + " : vérifie la clé et ses permissions (Voices en lecture).");
+    const j = await r.json();
+    store.set("elVoices", (j.voices || []).map(v => ({ id:v.voice_id, name:v.name, gender:(v.labels && v.labels.gender) || "" })));
+    assignElDefaults(); renderElCast();
+  } catch(err){ sys(err.message, true); }
+  finally{ $("#elLoad").disabled = false; $("#elLoad").textContent = "⟳ Charger mes voix ElevenLabs"; }
+};
+$("#vsLoad").onclick = async () => {
+  const base = vsBase();
+  $("#vsLoad").disabled = true; $("#vsLoad").textContent = "Chargement…";
+  try{
+    let r;
+    try{ r = await fetch(base + "/v1/audio/voices", { headers: vsHeaders(false) }); }catch(e){ throw new Error(vsNetErr(base)); }
+    if (!r.ok) throw new Error("VoiceStudio répond " + r.status + (r.status === 401 ? " : PIN manquant ou faux." : "."));
+    const j = await r.json();
+    let arr = Array.isArray(j) ? j : (j.voices || j.data || j.profiles || j.items || []);
+    if (!Array.isArray(arr) && arr && typeof arr === "object") arr = Object.entries(arr).map(([k, v]) => Object.assign({id:k}, typeof v === "object" ? v : {name:v}));
+    const mine = arr.map(v => typeof v === "string" ? {id:v, name:v} : {id: v.id || v.voice_id || v.profile_id || v.name, name: v.name || v.display_name || v.id || v.voice_id}).filter(v => v.id);
+    const std = ["alloy","ash","ballad","coral","echo","fable","nova","onyx","sage","shimmer","verse"].map(n => ({id:n, name:n + " (voix standard)"}));
+    store.set("vsVoices", mine.concat(std)); assignVsDefaults(); renderVsCast();
+    sys(mine.length ? `✔ ${mine.length} voix personnelles VoiceStudio chargées, plus les voix standard.`
+      : "Aucune voix personnelle trouvée dans VoiceStudio : seules les voix standard sont proposées. Pour tes propres voix, crée ou clone une voix dans VoiceStudio et enregistre-la comme profil, puis retouche ⟳." + (Array.isArray(j) ? "" : " (Réponse reçue : " + Object.keys(j).join(", ") + ")"));
+  } catch(err){ sys(err.message, true); }
+  finally{ $("#vsLoad").disabled = false; $("#vsLoad").textContent = "⟳ Charger mes voix VoiceStudio"; }
+};
+$("#forget").onclick = () => { ["kAN","kOA","kEL"].forEach(k => { $("#"+k).value = ""; store.set(k, ""); }); sys("Clés effacées de cet appareil."); };
+
+/* horloge */
+const t0 = Date.now();
+setInterval(() => { const s = Math.floor((Date.now()-t0)/1000); $("#clock").textContent = [s/3600|0,(s/60|0)%60,s%60].map(n=>String(n).padStart(2,"0")).join(":"); }, 1000);
+
+/* démarrage */
+$("#ver").textContent = "v" + APP_VERSION;
+$("#verNote").textContent = `App de jeu v${APP_VERSION} du ${APP_DATE}. Si ce numéro ne correspond pas à la dernière version envoyée, ferme l'onglet et rouvre-le (ou attends quelques minutes que GitHub se mette à jour).`;
+$("#changelog").innerHTML = CHANGELOG.map(([v, t]) => `<li><b>v${v}</b> : ${t}</li>`).join("");
+renderDocs(); renderElCast(); renderVsCast();
+if (history.length){
+  sys(`Partie reprise (${history.length} échanges). Consommation jusqu'ici : ${usage.in} jetons envoyés, ${usage.cached} relus en cache, ${usage.out} reçus.`);
+  history.forEach(m => m.role === "user" ? addMsg("me", esc(m.content)) : renderMJ(m.content, false));
+} else if (pasteMode()){
+  sys("Mode copier-coller : joue dans ton Projet Claude, copie chaque réponse de la Voix, puis touche « 📋 Coller et lire » (ou colle-la en bas et touche ➤). Voix réglées dans ⚙.");
+} else if (!docsReady() || !store.get("kAN","")){
+  sys("Bienvenue. Ouvre ⚙ pour charger les documents du MJ et ta clé Anthropic, puis touche « ▶ Lancer la partie ».");
+} else sys("Prêt. Touche « ▶ Lancer la partie ».");
+</script>
+</body>
+</html>
